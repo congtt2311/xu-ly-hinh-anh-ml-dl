@@ -1,0 +1,5 @@
+data/raw/*
+!data/raw/.gitkeep
+!data/raw/GoPro/
+data/raw/GoPro/*
+!data/raw/GoPro/.gitkeep
