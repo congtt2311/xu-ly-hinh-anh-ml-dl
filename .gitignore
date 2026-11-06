@@ -1,13 +1,6 @@
 data/raw/*
 !data/raw/.gitkeep
-!data/raw/dataset/
-data/raw/dataset/*
-!data/raw/dataset/Image Super Resolution - Unsplash/
-data/raw/dataset/Image Super Resolution - Unsplash/*
-!data/raw/dataset/Image Super Resolution - Unsplash/image_data.csv
-!data/raw/GoPro/
-data/raw/GoPro/*
-!data/raw/GoPro/.gitkeep
+!data/raw/image_data.csv
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/manifest.csv
