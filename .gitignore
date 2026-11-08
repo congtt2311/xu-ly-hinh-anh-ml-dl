@@ -4,3 +4,6 @@ data/raw/*
 data/processed/*
 !data/processed/.gitkeep
 !data/processed/manifest.csv
+
+# Model checkpoints (large, regenerate by training)
+*.pth
