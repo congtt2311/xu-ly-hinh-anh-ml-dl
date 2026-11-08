@@ -82,7 +82,10 @@ def prepare():
             "Restore the extracted high res and low res folders before preparing data."
         )
 
-    existing = [path.name for path in PROCESSED.iterdir() if path.name != ".gitkeep"]
+    generated_manifests = {".gitkeep", "gopro_manifest.csv"}
+    existing = [
+        path.name for path in PROCESSED.iterdir() if path.name not in generated_manifests
+    ]
     if existing:
         raise FileExistsError(
             f"{PROCESSED} is not empty (excluding .gitkeep): {', '.join(existing)}"

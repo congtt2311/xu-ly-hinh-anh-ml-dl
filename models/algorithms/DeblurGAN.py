@@ -20,8 +20,6 @@ import torch.nn.functional as F
 from PIL import Image
 from skimage.metrics import peak_signal_noise_ratio, structural_similarity
 from torch.utils.data import DataLoader, Dataset
-from torchvision import models
-from torchvision.transforms import functional as TF
 
 ROOT = Path(__file__).resolve().parents[2]
 GOPRO = ROOT / "data" / "raw" / "GOPRO_Large"
@@ -54,7 +52,9 @@ def split_scenes(n_val_scenes=2):
 
 
 def to_tensor(img):
-    return TF.to_tensor(img) * 2 - 1  # [0,1] -> [-1,1]
+    array = np.asarray(img, dtype=np.float32) / 255.0
+    tensor = torch.from_numpy(array.transpose(2, 0, 1).copy())
+    return tensor * 2 - 1  # [0,1] -> [-1,1]
 
 
 def to_uint8(t):
@@ -79,10 +79,12 @@ class GoProDataset(Dataset):
         if self.train:
             top = random.randint(0, blur.height - self.crop)
             left = random.randint(0, blur.width - self.crop)
-            blur = TF.crop(blur, top, left, self.crop, self.crop)
-            sharp = TF.crop(sharp, top, left, self.crop, self.crop)
+            box = (left, top, left + self.crop, top + self.crop)
+            blur = blur.crop(box)
+            sharp = sharp.crop(box)
             if random.random() < 0.5:
-                blur, sharp = TF.hflip(blur), TF.hflip(sharp)
+                blur = blur.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
+                sharp = sharp.transpose(Image.Transpose.FLIP_LEFT_RIGHT)
         return to_tensor(blur), to_tensor(sharp)
 
 
@@ -150,6 +152,12 @@ class PerceptualLoss(nn.Module):
 
     def __init__(self):
         super().__init__()
+        try:
+            from torchvision import models
+        except ImportError as exc:
+            raise ImportError(
+                "DeblurGAN training requires torchvision for the VGG19 perceptual loss."
+            ) from exc
         vgg = models.vgg19(weights=models.VGG19_Weights.IMAGENET1K_V1).features[:15]
         for p in vgg.parameters():
             p.requires_grad = False
