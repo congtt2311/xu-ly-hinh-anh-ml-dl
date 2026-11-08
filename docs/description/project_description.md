@@ -1,61 +1,83 @@
-import cv2
-import numpy as np
-import time
+# TÓM TẮT DỰ ÁN: HỆ THỐNG KHÔI PHỤC VÀ LÀM NÉT ẢNH
 
-def wiener_filter(img, psf, K=0.01):
-    """
-    Áp dụng thuật toán Wiener Filter trên miền tần số.
-    :param img: Ảnh đầu vào (Grayscale hoặc kênh đơn)
-    :param psf: Point Spread Function (Hàm truyền mờ)
-    :param K: Tỷ lệ hằng số Noise-to-Signal Power Ratio
-    :return: Ảnh đã làm nét
-    """
-    # 1. Chuyển ảnh và PSF sang miền tần số bằng FFT
-    img_fft = np.fft.fft2(img)
-    psf_fft = np.fft.fft2(psf, s=img.shape)
-    
-    # 2. Tính toán Wiener Filter Transfer Function: H* / (|H|^2 + K)
-    psf_fft_conj = np.conj(psf_fft)
-    kernel = psf_fft_conj / (np.abs(psf_fft)**2 + K)
-    
-    # 3. Phép nhân trên miền tần số và khôi phục về miền không gian bằng IFFT
-    result_fft = img_fft * kernel
-    result = np.abs(np.fft.ifft2(result_fft))
-    
-    # Chuẩn hóa giá trị pixel về [0, 255]
-    result = np.clip(result, 0, 255).astype(np.uint8)
-    return result
+## 1. Mục tiêu Dự án
+- Khôi phục ảnh mờ chuyển động (Motion Deblurring) bằng **Machine Learning** (Wiener Filter) và **Deep Learning** (DeblurGAN-v2, NAFNet).
+- Đánh giá định lượng trên bộ dữ liệu **GoPro Benchmark** qua các chỉ số **PSNR, SSIM, Latency**.
+- Cung cấp giao diện trực quan **Gradio UI** cho phép so sánh ảnh và các chỉ số trực tiếp.
 
-def deblur_wiener_image(image_path, kernel_size=15, K=0.01):
-    """
-    Hàm đọc ảnh, xử lý Wiener Filter và đo thời gian thực thi.
-    """
-    start_time = time.time()
-    
-    img = cv2.imread(image_path)
-    if img is None:
-        raise FileNotFoundError(f"Không tìm thấy ảnh tại đường dẫn: {image_path}")
-        
-    # Tạo Motion Blur Kernel giả định (PSF)
-    psf = np.zeros((kernel_size, kernel_size))
-    psf[int((kernel_size - 1) / 2), :] = 1.0 / kernel_size
+---
 
-    # Nếu là ảnh màu, xử lý độc lập từng kênh R, G, B
-    if len(img.shape) == 3:
-        channels = cv2.split(img)
-        restored_channels = []
-        for c in channels:
-            restored_c = wiener_filter(c, psf, K)
-            restored_channels.append(restored_c)
-        restored_img = cv2.merge(restored_channels)
-    else:
-        restored_img = wiener_filter(img, psf, K)
+## 2. Cấu trúc Thư mục Dự án (`Deblurring_Project/`)
 
-    process_time = time.time() - start_time
-    return restored_img, process_time
+```text
+Deblurring_Project/
+├── data/GoPro/               # Tập train (2103 cặp) & test (1111 cặp)
+├── src/                      # Mã nguồn xử lý chính (.py)
+│   ├── train_ml.py           # Thuật toán Wiener Filter
+│   ├── dl_models.py          # Class nạp mô hình DeblurGAN-v2 & NAFNet
+│   └── evaluate_metrics.py   # Hàm tính chỉ số PSNR, SSIM, Latency
+├── docs/description/         # Tài liệu mô tả dự án (.md)
+│   ├── algorithms/           # File mô tả chi tiết các thuật toán
+│   │   ├── Wiener_Filter.MD
+│   │   ├── DeblurGAN.MD
+│   │   └── NAFNet.MD
+│   └── project_description.md# Tổng quan dự án
+├── demo/app.py               # Giao diện Web demo bằng Gradio
+├── weights/                  # File trọng số pretrained (.pth)
+└── requirements.txt          # Khai báo các thư viện phụ thuộc
+---
+```
+## 3. Tóm tắt các Thuật toán Lõi
 
-if __name__ == "__main__":
-    # Chạy thử nghiệm file
-    # image_result, elapsed_time = deblur_wiener_image("data/GoPro/test/input/0.png")
-    # print(f"Thời gian xử lý: {elapsed_time:.4f} giây")
-    pass
+### A. Wiener Filter (Machine Learning Cổ điển)
+- **Nguyên lý:** Xử lý trên miền tần số (FFT), ước lượng hàm truyền mờ $H(u,v)$ (PSF) và tối thiểu hóa bình phương sai số trung bình (MSE).
+- **Công thức bộ lọc:**
+$$\hat{F}(u,v) = \left[ \frac{H^*(u,v)}{|H(u,v)|^2 + K} \right] G(u,v)$$
+- **Vai trò:** Làm Baseline mốc so sánh cổ điển với Deep Learning.
+
+### B. DeblurGAN-v2 (Deep Learning - cGAN)
+- **Kiến trúc:** Generator dạng **FPN (Feature Pyramid Network)** + Critic dạng **PatchGAN**.
+- **Cơ chế:** Học ánh xạ $I_B \rightarrow I_S$ với kết nối tàn dư toàn cục:
+$$\hat{I}_S = I_B + I_R$$
+- **Hàm tổn thất (Loss Function):**
+$$\mathcal{L}_{total} = \mathcal{L}_{GAN} + 100 \cdot \mathcal{L}_{X}$$
+*(Với $\mathcal{L}_{GAN}$ là WGAN-GP Loss và $\mathcal{L}_{X}$ là Perceptual Loss trích xuất từ lớp `conv3_3` của VGG-19).*
+
+### C. NAFNet (Deep Learning - SOTA Model)
+- **Đặc trưng cốt lõi:** Loại bỏ các hàm kích hoạt phi tuyến (ReLU/GELU), thay bằng **SimpleGate**:
+$$\text{SimpleGate}(X, Y) = X \odot Y$$
+- **Cải tiến:** Sử dụng **Simplified Channel Attention (SCA)** giúp tối ưu tốc độ và đạt chỉ số PSNR/SSIM vượt trội trên bộ GoPro.
+
+---
+```
+## 4. Phân bổ File Mã nguồn & Tài liệu
+```
+| Tên File | Thư mục | Nội dung chính |
+|---|---|---|
+| `train_ml.py` | `src/` | Chứa hàm `wiener_filter()` & `deblur_wiener_image()` |
+| `dl_models.py` | `src/` | Chứa class `DeblurGANv2Predictor` & `NAFNetPredictor` |
+| `evaluate_metrics.py` | `src/` | Chứa hàm tính `calculate_psnr()` & `calculate_ssim()` |
+| `app.py` | `demo/` | Giao diện Gradio tương tác so sánh ảnh Side-by-side |
+| `DeblurGAN.MD` | `docs/description/algorithms/` | Tài liệu toán học chi tiết cho mô hình DeblurGAN |
+
+---
+
+## 5. Các lệnh Git cơ bản
+
+```bash
+git add .
+git commit -m "Update project algorithms and documentation"
+git push origin main
+
+---
+
+```
+## Tham khảo
+
+1. R. C. Gonzalez, R. E. Woods, *Digital Image Processing*, 4th ed., Pearson, 2018 (Phần lý thuyết Wiener Filter & Restoration in Frequency Domain).
+2. S. Nah, T. H. Kim, K. M. Lee, *Deep Multi-scale Convolutional Neural Network for Dynamic Scene Deblurring*, CVPR 2017 (Bộ dữ liệu GoPro Benchmark).
+3. O. Kupyn et al., *DeblurGAN: Blind Motion Deblurring Using Conditional Adversarial Networks*, CVPR 2018. https://arxiv.org/abs/1711.07064
+4. O. Kupyn et al., *DeblurGAN-v2: Deblurring (Resnet) Mobile Networks for Fast Image Deblurring*, ICCV 2019. https://arxiv.org/abs/1908.03828
+5. L. Chen et al., *Simple Baselines for Image Restoration*, ECCV 2022 (Mô hình NAFNet SOTA). https://arxiv.org/abs/2204.04676
+6. I. Gulrajani et al., *Improved Training of Wasserstein GANs*, NeurIPS 2017 (WGAN-GP Loss).
+7. P. Isola et al., *Image-to-Image Translation with Conditional Adversarial Networks*, CVPR 2017 (pix2pix, PatchGAN Architecture).
