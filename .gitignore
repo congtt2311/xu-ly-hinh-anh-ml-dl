@@ -1,0 +1,10 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+data/
+checkpoints/
+checkoints/
+outputs/prediction/
+*.log
