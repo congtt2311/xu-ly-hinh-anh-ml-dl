@@ -1,3 +1,15 @@
+<<<<<<< HEAD
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.env
+data/
+checkpoints/
+checkoints/
+outputs/prediction/
+*.log
+=======
 data/raw/*
 !data/raw/.gitkeep
 !data/raw/image_data.csv
@@ -9,3 +21,38 @@ results/*
 
 # Model checkpoints (large, regenerate by training)
 *.pth
+>>>>>>> origin/main
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Environment variables
+.env
+
+# Dataset
+data/
+
+# Model checkpoints
+checkpoints/
+checkoints/
+*.pth
+*.pt
+
+# Generated predictions
+outputs/prediction/
+
+# Logs
+*.log
+
+# IDE
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
