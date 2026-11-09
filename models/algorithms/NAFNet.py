@@ -5,7 +5,7 @@ import os
 import argparse
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[1]
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
 class NAFNetDeblurrer:
     def __init__(self, weights_path: str, use_gpu: bool = True):

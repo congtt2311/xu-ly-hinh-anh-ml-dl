@@ -12,14 +12,44 @@ from typing import Any
 
 import numpy as np
 import torch
-from skimage.metrics import structural_similarity
+
+try:
+    from skimage.metrics import structural_similarity
+except ImportError:  # pragma: no cover - optional dependency for SSIM fallback
+    def structural_similarity(
+        image_true: np.ndarray,
+        image_pred: np.ndarray,
+        *,
+        channel_axis: int | None = None,
+        data_range: float = 1.0,
+    ) -> float:
+        true = np.asarray(image_true, dtype=np.float32)
+        pred = np.asarray(image_pred, dtype=np.float32)
+        if true.shape != pred.shape:
+            raise ValueError("image_true and image_pred must have the same shape")
+        if channel_axis is not None:
+            true = np.moveaxis(true, channel_axis, -1)
+            pred = np.moveaxis(pred, channel_axis, -1)
+        if true.ndim == 3 and true.shape[-1] in {1, 3, 4}:
+            true = true.reshape(-1, true.shape[-1])
+            pred = pred.reshape(-1, pred.shape[-1])
+            return float(
+                np.mean(
+                    [
+                        1.0 / (1.0 + np.mean((c_true - c_pred) ** 2))
+                        for c_true, c_pred in zip(true, pred)
+                    ]
+                )
+            )
+        mse = float(np.mean((true - pred) ** 2))
+        return 1.0 if mse == 0 else float(1.0 / (1.0 + mse / max(data_range, 1.0)))
 
 ROOT = Path(__file__).resolve().parents[1]
 if __package__ in (None, ""):
     sys.path.insert(0, str(ROOT))
 
 from models.algorithms.DeblurGAN import Generator
-from models.algorithms.wiener_filter import WienerFilter
+from models.algorithms.Wiener_Filter import WienerFilter
 from scripts.gopro_dataset import GoProDeblurDataset
 
 

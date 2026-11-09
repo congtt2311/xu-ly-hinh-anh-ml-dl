@@ -1,8 +1,8 @@
 """Image-restoration algorithms available in this package."""
 
-from ..nafnet import NAFNetDeblurrer
+from .NAFNet import NAFNetDeblurrer
 from .DeblurGAN import Critic, Generator
-from .wiener_filter import WienerFilter
+from .Wiener_Filter import WienerFilter
 
 __all__ = [
     "Critic",
