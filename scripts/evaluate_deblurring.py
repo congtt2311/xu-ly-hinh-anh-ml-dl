@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import csv
+import html
 import math
 import sys
 import time
@@ -12,6 +13,7 @@ from typing import Any
 
 import numpy as np
 import torch
+from PIL import Image
 
 try:
     from skimage.metrics import structural_similarity
@@ -58,6 +60,7 @@ DEFAULT_DEBLURGAN_CHECKPOINT = (
     ROOT / "models" / "saved_models" / "deblurgan" / "G_latest.pth"
 )
 DEFAULT_OUTPUT = ROOT / "results" / "gopro_test_metrics.csv"
+DEFAULT_DEMO_OUTPUT = ROOT / "results" / "demo"
 RESULT_FIELDS = (
     "model",
     "sequence",
@@ -84,6 +87,77 @@ def image_metrics(prediction: np.ndarray, target: np.ndarray) -> tuple[float, fl
         structural_similarity(target, prediction, channel_axis=-1, data_range=1.0)
     )
     return psnr, ssim
+
+
+def display_path(path: Path) -> str:
+    resolved = path.resolve()
+    try:
+        return resolved.relative_to(ROOT).as_posix()
+    except ValueError:
+        return resolved.as_uri()
+
+
+def save_demo_image(image: np.ndarray, output_path: Path) -> None:
+    pixels = np.round(np.clip(image, 0, 1) * 255).astype(np.uint8)
+    Image.fromarray(pixels).save(output_path)
+
+
+def write_demo_gallery(
+    samples: list[dict[str, Any]], output_dir: Path
+) -> Path:
+    output_dir.mkdir(parents=True, exist_ok=True)
+    sections = []
+    for sample in samples:
+        cards = []
+        for card in sample["cards"]:
+            metrics = ""
+            if "psnr_db" in card:
+                metrics = (
+                    f"<p>PSNR: {card['psnr_db']:.3f} dB · "
+                    f"SSIM: {card['ssim']:.4f}</p>"
+                )
+            cards.append(
+                "<article>"
+                f"<h3>{html.escape(card['label'])}</h3>"
+                f"<img src=\"images/{html.escape(card['image'], quote=True)}\" "
+                f"alt=\"{html.escape(card['label'], quote=True)}\" loading=\"lazy\">"
+                f"{metrics}</article>"
+            )
+        title = html.escape(f"{sample['sequence']} · {sample['filename']}")
+        sections.append(
+            f"<section><h2>{title}</h2><div class=\"grid\">"
+            f"{''.join(cards)}</div></section>"
+        )
+
+    page = f"""<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Demo khử mờ ảnh GoPro</title>
+<style>
+body{{margin:0;background:#f3f6fb;color:#172033;font:16px/1.5 Arial,sans-serif}}
+main{{max-width:1180px;margin:auto;padding:32px 20px}}
+header,section{{background:#fff;border:1px solid #dfe6f0;border-radius:16px;
+padding:22px;margin-bottom:20px}}
+h1{{margin:0 0 8px;color:#12366b}} h2{{font-size:18px}}
+.grid{{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}}
+article{{min-width:0}} h3{{font-size:15px;margin:0 0 8px}}
+img{{display:block;width:100%;height:auto;border-radius:9px;background:#e8edf5}}
+p{{color:#53627a;font-size:14px;margin:7px 0 0}}
+.note{{color:#53627a}}
+</style>
+</head>
+<body><main>
+<header><h1>Demo khử mờ ảnh GoPro</h1>
+<p class="note">So sánh ảnh mờ đầu vào, kết quả khôi phục và ảnh rõ tham chiếu.
+Chỉ số được tính trên từng cặp ảnh.</p></header>
+{''.join(sections)}
+</main></body></html>
+"""
+    page_path = output_dir / "index.html"
+    page_path.write_text(page, encoding="utf-8")
+    return page_path
 
 
 def load_nafnet(checkpoint_path: Path, device: torch.device) -> torch.nn.Module:
@@ -185,6 +259,11 @@ def evaluate(
     if args.limit is not None:
         dataset.rows = dataset.rows[: args.limit]
 
+    demo_samples: list[dict[str, Any]] = []
+    demo_images_dir = args.demo_output / "images"
+    if args.demo:
+        demo_images_dir.mkdir(parents=True, exist_ok=True)
+
     run_nafnet = args.method in {"both", "nafnet"}
     run_deblurgan = args.method in {"both", "deblurgan"}
     run_wiener = args.method in {"both", "wiener"}
@@ -209,6 +288,18 @@ def evaluate(
         sample = dataset[index]
         blurred = sample["input"].permute(1, 2, 0).numpy()
         sharp = sample["target"].permute(1, 2, 0).numpy()
+        demo_sample: dict[str, Any] | None = None
+        if args.demo:
+            stem = f"sample_{index + 1:03d}"
+            save_demo_image(blurred, demo_images_dir / f"{stem}_blur.png")
+            save_demo_image(sharp, demo_images_dir / f"{stem}_sharp.png")
+            demo_sample = {
+                "sequence": sample["sequence"],
+                "filename": sample["filename"],
+                "cards": [
+                    {"label": "Ảnh mờ đầu vào", "image": f"{stem}_blur.png"}
+                ],
+            }
         candidates: list[tuple[str, np.ndarray, float]] = []
 
         if run_wiener:
@@ -243,6 +334,21 @@ def evaluate(
                     "inference_ms": elapsed * 1000,
                 }
             )
+            if demo_sample is not None:
+                save_demo_image(restored, demo_images_dir / f"{stem}_{name}.png")
+                demo_sample["cards"].append(
+                    {
+                        "label": name,
+                        "image": f"{stem}_{name}.png",
+                        "psnr_db": psnr,
+                        "ssim": ssim,
+                    }
+                )
+        if demo_sample is not None:
+            demo_sample["cards"].append(
+                {"label": "Ảnh rõ tham chiếu", "image": f"{stem}_sharp.png"}
+            )
+            demo_samples.append(demo_sample)
         if (index + 1) % args.log_every == 0 or index + 1 == len(dataset):
             print(f"Evaluated {index + 1}/{len(dataset)} test images")
 
@@ -260,6 +366,9 @@ def evaluate(
                 ),
             }
         )
+    if args.demo:
+        page_path = write_demo_gallery(demo_samples, args.demo_output)
+        print(f"Demo gallery: {display_path(page_path)}")
     return results, summaries
 
 
@@ -278,8 +387,8 @@ def write_results(
             writer = csv.DictWriter(csv_file, fieldnames=fields)
             writer.writeheader()
             writer.writerows(rows)
-    print(f"Per-image results: {output_path}")
-    print(f"Summary: {summary_path}")
+    print(f"Per-image results: {display_path(output_path)}")
+    print(f"Summary: {display_path(summary_path)}")
     for row in summaries:
         print(
             f"{row['model']}: PSNR={row['mean_psnr_db']:.3f} dB, "
@@ -293,8 +402,18 @@ def main() -> None:
     parser.add_argument(
         "--method",
         choices=("both", "wiener", "nafnet", "deblurgan"),
-        default="both",
-        help="Evaluate all models or only one (default: both deep models and Wiener).",
+        help="Models to run. Defaults to Wiener for demo mode and all models otherwise.",
+    )
+    parser.add_argument(
+        "--demo",
+        action="store_true",
+        help="Save a visual comparison gallery as HTML for the selected test images.",
+    )
+    parser.add_argument(
+        "--demo-output",
+        type=Path,
+        default=DEFAULT_DEMO_OUTPUT,
+        help="Directory for demo images and the generated HTML gallery.",
     )
     parser.add_argument(
         "--manifest",
@@ -323,6 +442,10 @@ def main() -> None:
     parser.add_argument("--sigma", type=float, default=2.5)
     parser.add_argument("--noise-to-signal", type=float, default=0.01)
     args = parser.parse_args()
+    if args.method is None:
+        args.method = "wiener" if args.demo else "both"
+    if args.demo and args.limit is None:
+        args.limit = 3
     if args.limit is not None and args.limit < 1:
         parser.error("--limit must be at least 1")
     if args.log_every < 1:
