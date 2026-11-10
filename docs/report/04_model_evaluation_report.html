@@ -62,10 +62,19 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
 <a href="03_model_training_report.html" class="">Huấn luyện</a>
 <a href="04_model_evaluation_report.html" class="active">Đánh giá</a></nav></div>
 <header class="hero"><span class="eyebrow">04 · MODEL EVALUATION REPORT</span>
-    <h1>Kết quả đánh giá</h1>
-    <p>So sánh chất lượng ảnh theo PSNR và SSIM. Giá trị cao hơn thường cho thấy kết quả tốt hơn.</p>
+    <h1>Đánh giá NAFNet và hai mốc so sánh</h1>
+    <p>NAFNet là mô hình chính; Wiener Filter và DeblurGAN là hai baseline. Chỉ số chỉ được hiển thị khi có kết quả đúng với phương pháp đó.</p>
   </header>
-  <section><h2>Bảng kết quả</h2>
+  <section><h2>So sánh các mô hình của đề tài</h2>
+    <div class="table-wrap"><table><thead><tr><th>Mô hình / vai trò</th><th>Trạng thái</th><th>Số ảnh</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
+      <tbody><tr><th>NAFNet (mô hình chính)</th><td>Chưa có checkpoint</td><td>—</td><td>Chưa đánh giá</td><td>Chưa đánh giá</td></tr>
+<tr><td>Wiener Filter (baseline cổ điển)</td><td>Baseline</td><td>—</td><td>25.1743</td><td>0.7264</td></tr>
+<tr><td>DeblurGAN (baseline học sâu)</td><td>Chưa có checkpoint</td><td>—</td><td>Chưa đánh giá</td><td>Chưa đánh giá</td></tr></tbody>
+    </table></div>
+    <p class="note">CSV hiện chưa có kết quả NAFNet hoặc DeblurGAN. Các ô được ghi “Chưa đánh giá”, không thay bằng số liệu của mô hình khác.</p>
+  </section>
+  <section><h2>Số liệu CSV hiện có</h2>
+    <p class="muted">Bảng dưới đây giữ nguyên kết quả nguồn. Dòng CNN + Wiener là một thí nghiệm riêng, không phải NAFNet và không được dùng làm kết quả mô hình chính.</p>
     <div class="table-wrap"><table><thead><tr><th>Phương pháp</th><th>Số ảnh</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
       <tbody><tr><td>Blur</td><td>—</td><td>26.0938</td><td>0.7631</td></tr>
 <tr><td>Wiener</td><td>—</td><td>25.1743</td><td>0.7264</td></tr>
@@ -73,19 +82,19 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
     </table></div>
     <p class="note">Nguồn: <code>evaluation_results.csv</code>. CSV hiện không có cột số lượng ảnh, vì vậy số lượng được ghi là chưa cung cấp.</p>
   </section>
-  <section><h2>PSNR</h2><svg class="chart" viewBox="0 0 720 166" role="img" aria-label="PSNR comparison chart">
+  <section><h2>Biểu đồ số liệu CSV hiện có — PSNR</h2><svg class="chart" viewBox="0 0 720 166" role="img" aria-label="PSNR comparison chart">
 <text x="0" y="33" class="chart-label">Blur</text><rect x="170" y="12" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="12" width="374.7" height="28" rx="7" class="bar"/><text x="602" y="32" class="chart-value">26.09 dB</text>
 <text x="0" y="79" class="chart-label">Wiener</text><rect x="170" y="58" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="58" width="361.5" height="28" rx="7" class="bar"/><text x="602" y="78" class="chart-value">25.17 dB</text>
 <text x="0" y="125" class="chart-label">CNN + Wiener</text><rect x="170" y="104" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="104" width="375.0" height="28" rx="7" class="bar"/><text x="602" y="124" class="chart-value">26.12 dB</text>
 </svg></section>
-  <section><h2>SSIM</h2><svg class="chart" viewBox="0 0 720 166" role="img" aria-label="SSIM comparison chart">
+  <section><h2>Biểu đồ số liệu CSV hiện có — SSIM</h2><svg class="chart" viewBox="0 0 720 166" role="img" aria-label="SSIM comparison chart">
 <text x="0" y="33" class="chart-label">Blur</text><rect x="170" y="12" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="12" width="320.5" height="28" rx="7" class="bar"/><text x="602" y="32" class="chart-value">0.763</text>
 <text x="0" y="79" class="chart-label">Wiener</text><rect x="170" y="58" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="58" width="305.1" height="28" rx="7" class="bar"/><text x="602" y="78" class="chart-value">0.726</text>
 <text x="0" y="125" class="chart-label">CNN + Wiener</text><rect x="170" y="104" width="420" height="28" rx="7" class="bar-track"/><rect x="170" y="104" width="320.8" height="28" rx="7" class="bar"/><text x="602" y="124" class="chart-value">0.764</text>
 </svg></section>
   <section><h2>Diễn giải</h2>
-    <p>Blur là mốc ảnh đầu vào; Wiener là baseline cổ điển; CNN + Wiener là phương pháp học sâu kết hợp trong bảng CSV.</p>
-    <p class="muted">Báo cáo trình bày số liệu hiện có, không tự chạy lại benchmark hay giả định checkpoint đã tồn tại.</p>
+    <p>NAFNet cần được huấn luyện và đánh giá trên tập GoPro test. Wiener Filter cung cấp baseline cổ điển; DeblurGAN cung cấp baseline học sâu.</p>
+    <p class="muted">Biểu đồ CSV có thể chứa kết quả CNN + Wiener từ thí nghiệm cũ. Không diễn giải dòng này thành NAFNet hoặc DeblurGAN.</p>
   </section>
   <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>
 </main>

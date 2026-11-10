@@ -13,6 +13,8 @@ CHECKPOINT_PATH = ROOT / "checkpoints"
 OUTPUT_PATH = ROOT / "outputs"
 IMAGE_OUTPUT_PATH = ROOT / "docs" / "images"
 REPORT_PATH = ROOT / "docs" / "report"
+NAFNET_CHECKPOINT_PATH = ROOT / "weights" / "NAFNet-GoPro-width32.pth"
+DEBLURGAN_CHECKPOINT_PATH = ROOT / "models" / "saved_models" / "deblurgan" / "G_latest.pth"
 
 IMAGE_SIZE = 128
 

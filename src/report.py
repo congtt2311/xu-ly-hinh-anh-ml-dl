@@ -9,16 +9,11 @@ from datetime import date
 from pathlib import Path
 
 from config import (
-    BATCH_SIZE,
-    CHECKPOINT_PATH,
-    EPOCHS,
-    IMAGE_SIZE,
-    LEARNING_RATE,
+    DEBLURGAN_CHECKPOINT_PATH,
     MANIFEST_PATH,
-    NUM_WORKERS,
+    NAFNET_CHECKPOINT_PATH,
     OUTPUT_PATH,
     REPORT_PATH,
-    WIENER_SIZE,
 )
 
 
@@ -209,7 +204,7 @@ def generate_multipage_report(
     results_csv: str | Path = OUTPUT_PATH / "evaluation_results.csv",
     report_directory: str | Path = REPORT_PATH,
     manifest_path: str | Path = MANIFEST_PATH,
-    checkpoint_path: str | Path = CHECKPOINT_PATH / "best_model.pth",
+    checkpoint_path: str | Path = NAFNET_CHECKPOINT_PATH,
 ) -> Path:
     """Generate an index and four linked reports; return the index path."""
     results_csv = Path(results_csv)
@@ -219,36 +214,44 @@ def generate_multipage_report(
     rows = _read_results(results_csv)
     split_counts, sequence_count, manifest_warning = _read_dataset_summary(manifest_path)
     total_pairs = sum(split_counts.values())
-    checkpoint_exists = checkpoint_path.is_file()
+    nafnet_checkpoint_exists = checkpoint_path.is_file()
+    deblurgan_checkpoint_exists = DEBLURGAN_CHECKPOINT_PATH.is_file()
     image_counts_present = all(row["Images"] for row in rows)
 
     report_directory.mkdir(parents=True, exist_ok=True)
 
     overview_body = f"""
-  <header class="hero"><span class="eyebrow">PROJECT PRESENTATION · GOPRO</span>
-    <h1>Hệ thống khử mờ và phục hồi ảnh</h1>
-    <p>Báo cáo tổng quan dữ liệu, pipeline xử lý, cấu hình huấn luyện và kết quả đánh giá.</p>
+  <header class="hero"><span class="eyebrow">MÔ HÌNH CHÍNH · DEEP LEARNING</span>
+    <h1>NAFNet — khôi phục ảnh mờ GoPro</h1>
+    <p>NAFNet là mô hình trọng tâm của đồ án. Wiener Filter và DeblurGAN được sử dụng làm hai mốc so sánh.</p>
     <div class="pills"><span class="pill">GoPro Large</span>
-      <span class="pill">{len(rows)} phương pháp trong CSV</span>
+      <span class="pill">NAFNet · mô hình chính</span>
+      <span class="pill">Wiener + DeblurGAN · baseline</span>
       <span class="pill">PSNR · SSIM</span></div>
   </header>
-  <section><h2>Tổng quan dự án</h2>
+  <section><h2>Vai trò mô hình</h2>
+    <div class="grid">
+      <div class="stat"><strong>NAFNet</strong><span>mô hình chính cần huấn luyện và đánh giá</span></div>
+      <div class="stat"><strong>Wiener</strong><span>baseline xử lý ảnh cổ điển</span></div>
+      <div class="stat"><strong>DeblurGAN</strong><span>baseline học sâu để so sánh</span></div>
+    </div>
+    <p class="note {"ok" if nafnet_checkpoint_exists else ""}">
+      {"Đã tìm thấy checkpoint NAFNet." if nafnet_checkpoint_exists else "Chưa có checkpoint NAFNet; báo cáo không xem kết quả của CNN + Wiener là kết quả NAFNet."}
+    </p>
+  </section>
+  <section><h2>Dữ liệu dự án</h2>
     <div class="grid">
       {_stat(str(total_pairs) if total_pairs else "—", "cặp ảnh trong manifest")}
       {_stat(str(split_counts.get("train", "—")), "cặp train")}
       {_stat(str(split_counts.get("valid", "—")), "cặp validation")}
       {_stat(str(split_counts.get("test", "—")), "cặp test")}
     </div>
-    <p class="note {"ok" if checkpoint_exists else ""}">
-      {"Đã tìm thấy checkpoint CNN." if checkpoint_exists else "Chưa tìm thấy checkpoint CNN; kết quả CSV có thể là thí nghiệm đã lưu trước đó."}
-      Báo cáo không tự suy diễn trạng thái huấn luyện từ số liệu đánh giá.
-    </p>
   </section>
   <section><h2>Các phần trình bày</h2><div class="grid">
     <a class="link-card" href="01_data_report.html"><b>01 · Dữ liệu</b><span>GoPro, ghép cặp ảnh và chia tập.</span></a>
-    <a class="link-card" href="02_feature_pipeline_report.html"><b>02 · Feature pipeline</b><span>Từ ảnh mờ đến ảnh phục hồi.</span></a>
-    <a class="link-card" href="03_model_training_report.html"><b>03 · Huấn luyện</b><span>Mô hình, loss, optimizer và checkpoint.</span></a>
-    <a class="link-card" href="04_model_evaluation_report.html"><b>04 · Đánh giá</b><span>PSNR, SSIM và so sánh phương pháp.</span></a>
+    <a class="link-card" href="02_feature_pipeline_report.html"><b>02 · NAFNet pipeline</b><span>Luồng xử lý của mô hình chính.</span></a>
+    <a class="link-card" href="03_model_training_report.html"><b>03 · Huấn luyện NAFNet</b><span>Kiến trúc, cấu hình và checkpoint.</span></a>
+    <a class="link-card" href="04_model_evaluation_report.html"><b>04 · Đánh giá</b><span>NAFNet so với Wiener và DeblurGAN.</span></a>
   </div></section>
 """
 
@@ -265,7 +268,7 @@ def generate_multipage_report(
     data_body = f"""
   <header class="hero"><span class="eyebrow">01 · DATA REPORT</span>
     <h1>Dữ liệu GoPro Large</h1>
-    <p>Dữ liệu ảnh mờ chuyển động và ảnh sharp tham chiếu dùng cho bài toán image deblurring.</p>
+    <p>Dữ liệu GoPro dùng để huấn luyện và đánh giá NAFNet; hai thuật toán còn lại là các mốc tham chiếu.</p>
   </header>
   <section><h2>Phân chia dữ liệu</h2>
     <div class="table-wrap"><table><thead><tr><th>Tập dữ liệu</th><th>Số cặp ảnh</th></tr></thead>
@@ -279,61 +282,117 @@ def generate_multipage_report(
     <div class="step"><b>Blur gamma</b> — biến thể ảnh mờ được lưu trong dataset; pipeline hiện tại dùng thư mục blur.</div>
   </div></section>
   <section><h2>Quy tắc sử dụng</h2>
-    <p>Train và validation được tách theo sequence trong manifest; tập test giữ riêng để đánh giá.</p>
+    <p>Train và validation được tách theo sequence trong manifest; tập test giữ riêng để đánh giá NAFNet và các baseline.</p>
     <p class="muted">Các số lượng trên được đọc trực tiếp từ manifest khi tạo báo cáo.</p>
   </section>
 """
 
     pipeline_body = """
-  <header class="hero"><span class="eyebrow">02 · FEATURE PIPELINE REPORT</span>
-    <h1>Pipeline xử lý ảnh</h1>
-    <p>Luồng xử lý kết hợp bộ lọc Wiener làm đầu vào tham khảo và CNN dự đoán phần hiệu chỉnh.</p>
+  <header class="hero"><span class="eyebrow">02 · NAFNET PIPELINE</span>
+    <h1>Pipeline mô hình chính: NAFNet</h1>
+    <p>NAFNet học ánh xạ trực tiếp từ ảnh blur sang ảnh sharp. Wiener Filter và DeblurGAN được đánh giá riêng làm baseline.</p>
   </header>
   <section><h2>Luồng dữ liệu</h2><div class="steps">
-    <div class="step"><b>1. Đọc cặp ảnh</b> — ảnh RGB blur và sharp được chuẩn hóa về [0, 1].</div>
-    <div class="step"><b>2. Crop train</b> — lấy crop ngẫu nhiên đồng bộ trên ảnh blur/sharp; validation và test dùng center crop hoặc toàn ảnh theo cấu hình.</div>
-    <div class="step"><b>3. Wiener Filter</b> — lọc từng kênh để tạo ảnh tham khảo bổ sung.</div>
-    <div class="step"><b>4. CNN residual</b> — CNN nhận ảnh blur và Wiener, dự đoán phần hiệu chỉnh cộng vào ảnh blur.</div>
-    <div class="step"><b>5. Đánh giá/lưu</b> — đầu ra được giới hạn trong [0, 1], tính PSNR và SSIM so với sharp.</div>
+    <div class="step"><b>1. Đọc cặp ảnh</b> — ảnh RGB blur/sharp được chuẩn hóa về [0, 1].</div>
+    <div class="step"><b>2. Crop train</b> — crop ngẫu nhiên 256×256 đồng bộ cho ảnh blur/sharp; validation dùng toàn ảnh.</div>
+    <div class="step"><b>3. NAFNet</b> — encoder-decoder có NAFBlock, SimpleGate và simplified channel attention dự đoán ảnh khôi phục.</div>
+    <div class="step"><b>4. Padding/crop</b> — kích thước được đệm chia hết cho 8 khi cần; đầu ra được cắt về kích thước ban đầu.</div>
+    <div class="step"><b>5. Đánh giá</b> — so ảnh NAFNet với sharp bằng L1, PSNR và các metric trong benchmark.</div>
   </div></section>
   <section><h2>Đầu vào và đầu ra mô hình</h2>
-    <p><code>input = concat(blur, wiener)</code> có 6 kênh; CNN dự đoán correction 3 kênh.</p>
-    <pre>restored = clamp(blur + CNN(concat(blur, wiener)), 0, 1)</pre>
-    <p class="muted">Cài đặt tương ứng nằm trong <code>src/dataset.py</code>, <code>src/wiener.py</code> và <code>src/model.py</code>.</p>
+    <pre>restored = clamp(NAFNet(blur), 0, 1)</pre>
+    <p>Wiener Filter và DeblurGAN không nằm trong đường truyền NAFNet; mỗi baseline xử lý ảnh blur độc lập để so sánh công bằng trên cùng tập test.</p>
+    <p class="muted">Cài đặt NAFNet: <code>scripts/train_nafnet.py</code>; đánh giá so sánh: <code>scripts/evaluate_deblurring.py</code>.</p>
   </section>
 """
 
     checkpoint_text = (
-        f"Checkpoint hiện có: {checkpoint_path} ({checkpoint_path.stat().st_size:,} bytes)."
-        if checkpoint_exists
-        else f"Chưa có checkpoint tại {checkpoint_path}; chưa thể xác nhận mô hình đã được huấn luyện trong workspace này."
+        f"Đã tìm thấy checkpoint NAFNet: {checkpoint_path} ({checkpoint_path.stat().st_size:,} bytes)."
+        if nafnet_checkpoint_exists
+        else f"Chưa có checkpoint NAFNet tại {checkpoint_path}; mô hình chính chưa được xác nhận đã huấn luyện."
     )
     training_body = f"""
   <header class="hero"><span class="eyebrow">03 · MODEL TRAINING REPORT</span>
-    <h1>Huấn luyện mô hình</h1>
-    <p>Cấu hình mặc định trong mã nguồn và trạng thái checkpoint tại thời điểm tạo báo cáo.</p>
+    <h1>Huấn luyện mô hình chính: NAFNet</h1>
+    <p>Cấu hình dưới đây lấy từ lệnh huấn luyện NAFNet của dự án; Wiener và DeblurGAN là mô hình so sánh, không phải mô hình chính.</p>
   </header>
-  <section><h2>Cấu hình mặc định</h2>
+  <section><h2>Kiến trúc NAFNet</h2>
     <div class="grid">
-      {_stat(str(EPOCHS), "epochs")}
-      {_stat(str(BATCH_SIZE), "batch size")}
-      {_stat(str(IMAGE_SIZE) + " × " + str(IMAGE_SIZE), "crop train")}
-      {_stat(f"{LEARNING_RATE:g}", "learning rate")}
-      {_stat("Adam", "optimizer")}
-      {_stat(f"{WIENER_SIZE} × {WIENER_SIZE}", "Wiener window")}
+      {_stat("Width 32", "số kênh nền")}
+      {_stat("12", "middle NAF blocks")}
+      {_stat("2, 2, 4, 8", "encoder blocks")}
+      {_stat("2, 2, 2, 2", "decoder blocks")}
+      {_stat("SimpleGate", "gating")}
+      {_stat("SCA", "channel attention")}
     </div>
-    <p>Loss huấn luyện: L1. Scheduler: ReduceLROnPlateau theo validation loss. Seed mặc định của lệnh train: 42.</p>
+  </section>
+  <section><h2>Cấu hình huấn luyện trong mã nguồn</h2>
+    <div class="grid">
+      {_stat("100", "epochs mặc định")}
+      {_stat("1", "batch size mặc định")}
+      {_stat("256 × 256", "crop train")}
+      {_stat("0.001", "learning rate")}
+      {_stat("AdamW", "optimizer")}
+      {_stat("L1", "loss")}
+    </div>
+    <p>Seed mặc định: 42. Checkpoint tốt nhất được chọn theo validation L1.</p>
   </section>
   <section><h2>Checkpoint</h2>
-    <p class="note {"ok" if checkpoint_exists else ""}">{html.escape(checkpoint_text)}</p>
-    <p>Checkpoint dự kiến được lưu tại <code>checkpoints/best_model.pth</code> và <code>checkpoints/last_model.pth</code>.</p>
+    <p class="note {"ok" if nafnet_checkpoint_exists else ""}">{html.escape(checkpoint_text)}</p>
+    <p>Đường dẫn mặc định: <code>weights/NAFNet-GoPro-width32.pth</code>.</p>
   </section>
   <section><h2>Lệnh chạy</h2>
-    <pre>python train.py --epochs 5 --batch-size 1 --patch-size 128
-python evaluate.py --limit 0</pre>
-    <p class="muted">Huấn luyện toàn bộ dataset có thể cần thời gian và tài nguyên đáng kể; lệnh mẫu trên là cấu hình demo, không phải kết quả đã chạy.</p>
+    <pre>python scripts/train_nafnet.py --epochs 100 --device auto
+python scripts/evaluate_deblurring.py --method all</pre>
+    <p class="muted">Đây là lệnh hướng dẫn; báo cáo không khẳng định huấn luyện đã chạy nếu không tìm thấy checkpoint.</p>
   </section>
 """
+
+    def metric_cells(row: dict[str, str] | None) -> str:
+        if row is None:
+            return "<td>—</td><td>Chưa đánh giá</td><td>Chưa đánh giá</td>"
+        image_count = html.escape(row["Images"]) if row["Images"] else "—"
+        return (
+            f"<td>{image_count}</td><td>{row['PSNR']}</td><td>{row['SSIM']}</td>"
+        )
+
+    nafnet_row = next(
+        (row for row in rows if "nafnet" in row["Method"].casefold()),
+        None,
+    )
+    wiener_row = next(
+        (row for row in rows if "wiener" in row["Method"].casefold()),
+        None,
+    )
+    deblurgan_row = next(
+        (row for row in rows if "deblurgan" in row["Method"].casefold()),
+        None,
+    )
+    nafnet_status = (
+        "Có checkpoint · chưa đánh giá"
+        if nafnet_checkpoint_exists and nafnet_row is None
+        else "Đã đánh giá"
+        if nafnet_row is not None
+        else "Chưa có checkpoint"
+    )
+    deblurgan_status = (
+        "Có checkpoint · chưa đánh giá"
+        if deblurgan_checkpoint_exists and deblurgan_row is None
+        else "Đã đánh giá"
+        if deblurgan_row is not None
+        else "Chưa có checkpoint"
+    )
+    model_rows = "\n".join(
+        [
+            "<tr><th>NAFNet (mô hình chính)</th>"
+            f"<td>{nafnet_status}</td>{metric_cells(nafnet_row)}</tr>",
+            "<tr><td>Wiener Filter (baseline cổ điển)</td>"
+            f"<td>{'Baseline' if wiener_row else 'Chưa có số liệu'}</td>"
+            f"{metric_cells(wiener_row)}</tr>",
+            "<tr><td>DeblurGAN (baseline học sâu)</td>"
+            f"<td>{deblurgan_status}</td>{metric_cells(deblurgan_row)}</tr>",
+        ]
+    )
 
     result_rows = "\n".join(
         "<tr>"
@@ -344,20 +403,27 @@ python evaluate.py --limit 0</pre>
     )
     evaluation_body = f"""
   <header class="hero"><span class="eyebrow">04 · MODEL EVALUATION REPORT</span>
-    <h1>Kết quả đánh giá</h1>
-    <p>So sánh chất lượng ảnh theo PSNR và SSIM. Giá trị cao hơn thường cho thấy kết quả tốt hơn.</p>
+    <h1>Đánh giá NAFNet và hai mốc so sánh</h1>
+    <p>NAFNet là mô hình chính; Wiener Filter và DeblurGAN là hai baseline. Chỉ số chỉ được hiển thị khi có kết quả đúng với phương pháp đó.</p>
   </header>
-  <section><h2>Bảng kết quả</h2>
+  <section><h2>So sánh các mô hình của đề tài</h2>
+    <div class="table-wrap"><table><thead><tr><th>Mô hình / vai trò</th><th>Trạng thái</th><th>Số ảnh</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
+      <tbody>{model_rows}</tbody>
+    </table></div>
+    <p class="note">CSV hiện chưa có kết quả NAFNet hoặc DeblurGAN. Các ô được ghi “Chưa đánh giá”, không thay bằng số liệu của mô hình khác.</p>
+  </section>
+  <section><h2>Số liệu CSV hiện có</h2>
+    <p class="muted">Bảng dưới đây giữ nguyên kết quả nguồn. Dòng CNN + Wiener là một thí nghiệm riêng, không phải NAFNet và không được dùng làm kết quả mô hình chính.</p>
     <div class="table-wrap"><table><thead><tr><th>Phương pháp</th><th>Số ảnh</th><th>PSNR (dB) ↑</th><th>SSIM ↑</th></tr></thead>
       <tbody>{result_rows}</tbody>
     </table></div>
     <p class="note">Nguồn: <code>{html.escape(results_csv.name)}</code>. {"CSV hiện không có cột số lượng ảnh, vì vậy số lượng được ghi là chưa cung cấp." if not image_counts_present else "Số ảnh được đọc từ CSV."}</p>
   </section>
-  <section><h2>PSNR</h2>{_chart(rows, "PSNR")}</section>
-  <section><h2>SSIM</h2>{_chart(rows, "SSIM")}</section>
+  <section><h2>Biểu đồ số liệu CSV hiện có — PSNR</h2>{_chart(rows, "PSNR")}</section>
+  <section><h2>Biểu đồ số liệu CSV hiện có — SSIM</h2>{_chart(rows, "SSIM")}</section>
   <section><h2>Diễn giải</h2>
-    <p>Blur là mốc ảnh đầu vào; Wiener là baseline cổ điển; CNN + Wiener là phương pháp học sâu kết hợp trong bảng CSV.</p>
-    <p class="muted">Báo cáo trình bày số liệu hiện có, không tự chạy lại benchmark hay giả định checkpoint đã tồn tại.</p>
+    <p>NAFNet cần được huấn luyện và đánh giá trên tập GoPro test. Wiener Filter cung cấp baseline cổ điển; DeblurGAN cung cấp baseline học sâu.</p>
+    <p class="muted">Biểu đồ CSV có thể chứa kết quả CNN + Wiener từ thí nghiệm cũ. Không diễn giải dòng này thành NAFNet hoặc DeblurGAN.</p>
   </section>
 """
 

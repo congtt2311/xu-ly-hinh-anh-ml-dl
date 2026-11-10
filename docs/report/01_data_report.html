@@ -63,7 +63,7 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
 <a href="04_model_evaluation_report.html" class="">Đánh giá</a></nav></div>
 <header class="hero"><span class="eyebrow">01 · DATA REPORT</span>
     <h1>Dữ liệu GoPro Large</h1>
-    <p>Dữ liệu ảnh mờ chuyển động và ảnh sharp tham chiếu dùng cho bài toán image deblurring.</p>
+    <p>Dữ liệu GoPro dùng để huấn luyện và đánh giá NAFNet; hai thuật toán còn lại là các mốc tham chiếu.</p>
   </header>
   <section><h2>Phân chia dữ liệu</h2>
     <div class="table-wrap"><table><thead><tr><th>Tập dữ liệu</th><th>Số cặp ảnh</th></tr></thead>
@@ -79,7 +79,7 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
     <div class="step"><b>Blur gamma</b> — biến thể ảnh mờ được lưu trong dataset; pipeline hiện tại dùng thư mục blur.</div>
   </div></section>
   <section><h2>Quy tắc sử dụng</h2>
-    <p>Train và validation được tách theo sequence trong manifest; tập test giữ riêng để đánh giá.</p>
+    <p>Train và validation được tách theo sequence trong manifest; tập test giữ riêng để đánh giá NAFNet và các baseline.</p>
     <p class="muted">Các số lượng trên được đọc trực tiếp từ manifest khi tạo báo cáo.</p>
   </section>
   <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>

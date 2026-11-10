@@ -62,28 +62,38 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
 <a href="03_model_training_report.html" class="active">Huấn luyện</a>
 <a href="04_model_evaluation_report.html" class="">Đánh giá</a></nav></div>
 <header class="hero"><span class="eyebrow">03 · MODEL TRAINING REPORT</span>
-    <h1>Huấn luyện mô hình</h1>
-    <p>Cấu hình mặc định trong mã nguồn và trạng thái checkpoint tại thời điểm tạo báo cáo.</p>
+    <h1>Huấn luyện mô hình chính: NAFNet</h1>
+    <p>Cấu hình dưới đây lấy từ lệnh huấn luyện NAFNet của dự án; Wiener và DeblurGAN là mô hình so sánh, không phải mô hình chính.</p>
   </header>
-  <section><h2>Cấu hình mặc định</h2>
+  <section><h2>Kiến trúc NAFNet</h2>
     <div class="grid">
-      <div class="stat"><strong>5</strong><span>epochs</span></div>
-      <div class="stat"><strong>1</strong><span>batch size</span></div>
-      <div class="stat"><strong>128 × 128</strong><span>crop train</span></div>
-      <div class="stat"><strong>0.0001</strong><span>learning rate</span></div>
-      <div class="stat"><strong>Adam</strong><span>optimizer</span></div>
-      <div class="stat"><strong>5 × 5</strong><span>Wiener window</span></div>
+      <div class="stat"><strong>Width 32</strong><span>số kênh nền</span></div>
+      <div class="stat"><strong>12</strong><span>middle NAF blocks</span></div>
+      <div class="stat"><strong>2, 2, 4, 8</strong><span>encoder blocks</span></div>
+      <div class="stat"><strong>2, 2, 2, 2</strong><span>decoder blocks</span></div>
+      <div class="stat"><strong>SimpleGate</strong><span>gating</span></div>
+      <div class="stat"><strong>SCA</strong><span>channel attention</span></div>
     </div>
-    <p>Loss huấn luyện: L1. Scheduler: ReduceLROnPlateau theo validation loss. Seed mặc định của lệnh train: 42.</p>
+  </section>
+  <section><h2>Cấu hình huấn luyện trong mã nguồn</h2>
+    <div class="grid">
+      <div class="stat"><strong>100</strong><span>epochs mặc định</span></div>
+      <div class="stat"><strong>1</strong><span>batch size mặc định</span></div>
+      <div class="stat"><strong>256 × 256</strong><span>crop train</span></div>
+      <div class="stat"><strong>0.001</strong><span>learning rate</span></div>
+      <div class="stat"><strong>AdamW</strong><span>optimizer</span></div>
+      <div class="stat"><strong>L1</strong><span>loss</span></div>
+    </div>
+    <p>Seed mặc định: 42. Checkpoint tốt nhất được chọn theo validation L1.</p>
   </section>
   <section><h2>Checkpoint</h2>
-    <p class="note ">Chưa có checkpoint tại D:\ĐỒ ÁN XLHA\checkpoints\best_model.pth; chưa thể xác nhận mô hình đã được huấn luyện trong workspace này.</p>
-    <p>Checkpoint dự kiến được lưu tại <code>checkpoints/best_model.pth</code> và <code>checkpoints/last_model.pth</code>.</p>
+    <p class="note ">Chưa có checkpoint NAFNet tại D:\ĐỒ ÁN XLHA\weights\NAFNet-GoPro-width32.pth; mô hình chính chưa được xác nhận đã huấn luyện.</p>
+    <p>Đường dẫn mặc định: <code>weights/NAFNet-GoPro-width32.pth</code>.</p>
   </section>
   <section><h2>Lệnh chạy</h2>
-    <pre>python train.py --epochs 5 --batch-size 1 --patch-size 128
-python evaluate.py --limit 0</pre>
-    <p class="muted">Huấn luyện toàn bộ dataset có thể cần thời gian và tài nguyên đáng kể; lệnh mẫu trên là cấu hình demo, không phải kết quả đã chạy.</p>
+    <pre>python scripts/train_nafnet.py --epochs 100 --device auto
+python scripts/evaluate_deblurring.py --method all</pre>
+    <p class="muted">Đây là lệnh hướng dẫn; báo cáo không khẳng định huấn luyện đã chạy nếu không tìm thấy checkpoint.</p>
   </section>
   <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>
 </main>

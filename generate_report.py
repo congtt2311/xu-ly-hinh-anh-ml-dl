@@ -1,6 +1,12 @@
 import argparse
 
-from config import CHECKPOINT_PATH, MANIFEST_PATH, OUTPUT_PATH, REPORT_PATH, ROOT
+from config import (
+    MANIFEST_PATH,
+    NAFNET_CHECKPOINT_PATH,
+    OUTPUT_PATH,
+    REPORT_PATH,
+    ROOT,
+)
 from src.report import generate_multipage_report
 
 
@@ -26,14 +32,14 @@ def main():
     parser.add_argument(
         "--checkpoint",
         default=None,
-        help="CNN checkpoint; defaults to checkpoints/best_model.pth when present.",
+        help="NAFNet checkpoint; defaults to the project GoPro NAFNet checkpoint.",
     )
     args = parser.parse_args()
     report_path = generate_multipage_report(
         args.input,
         args.output,
         manifest_path=args.manifest or MANIFEST_PATH,
-        checkpoint_path=args.checkpoint or CHECKPOINT_PATH / "best_model.pth",
+        checkpoint_path=args.checkpoint or NAFNET_CHECKPOINT_PATH,
     )
     print(f"HTML report saved to: {report_path.relative_to(ROOT)}")
 

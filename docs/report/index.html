@@ -61,30 +61,37 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
 <a href="02_feature_pipeline_report.html" class="">Pipeline</a>
 <a href="03_model_training_report.html" class="">Huấn luyện</a>
 <a href="04_model_evaluation_report.html" class="">Đánh giá</a></nav></div>
-<header class="hero"><span class="eyebrow">PROJECT PRESENTATION · GOPRO</span>
-    <h1>Hệ thống khử mờ và phục hồi ảnh</h1>
-    <p>Báo cáo tổng quan dữ liệu, pipeline xử lý, cấu hình huấn luyện và kết quả đánh giá.</p>
+<header class="hero"><span class="eyebrow">MÔ HÌNH CHÍNH · DEEP LEARNING</span>
+    <h1>NAFNet — khôi phục ảnh mờ GoPro</h1>
+    <p>NAFNet là mô hình trọng tâm của đồ án. Wiener Filter và DeblurGAN được sử dụng làm hai mốc so sánh.</p>
     <div class="pills"><span class="pill">GoPro Large</span>
-      <span class="pill">3 phương pháp trong CSV</span>
+      <span class="pill">NAFNet · mô hình chính</span>
+      <span class="pill">Wiener + DeblurGAN · baseline</span>
       <span class="pill">PSNR · SSIM</span></div>
   </header>
-  <section><h2>Tổng quan dự án</h2>
+  <section><h2>Vai trò mô hình</h2>
+    <div class="grid">
+      <div class="stat"><strong>NAFNet</strong><span>mô hình chính cần huấn luyện và đánh giá</span></div>
+      <div class="stat"><strong>Wiener</strong><span>baseline xử lý ảnh cổ điển</span></div>
+      <div class="stat"><strong>DeblurGAN</strong><span>baseline học sâu để so sánh</span></div>
+    </div>
+    <p class="note ">
+      Chưa có checkpoint NAFNet; báo cáo không xem kết quả của CNN + Wiener là kết quả NAFNet.
+    </p>
+  </section>
+  <section><h2>Dữ liệu dự án</h2>
     <div class="grid">
       <div class="stat"><strong>3214</strong><span>cặp ảnh trong manifest</span></div>
       <div class="stat"><strong>1923</strong><span>cặp train</span></div>
       <div class="stat"><strong>180</strong><span>cặp validation</span></div>
       <div class="stat"><strong>1111</strong><span>cặp test</span></div>
     </div>
-    <p class="note ">
-      Chưa tìm thấy checkpoint CNN; kết quả CSV có thể là thí nghiệm đã lưu trước đó.
-      Báo cáo không tự suy diễn trạng thái huấn luyện từ số liệu đánh giá.
-    </p>
   </section>
   <section><h2>Các phần trình bày</h2><div class="grid">
     <a class="link-card" href="01_data_report.html"><b>01 · Dữ liệu</b><span>GoPro, ghép cặp ảnh và chia tập.</span></a>
-    <a class="link-card" href="02_feature_pipeline_report.html"><b>02 · Feature pipeline</b><span>Từ ảnh mờ đến ảnh phục hồi.</span></a>
-    <a class="link-card" href="03_model_training_report.html"><b>03 · Huấn luyện</b><span>Mô hình, loss, optimizer và checkpoint.</span></a>
-    <a class="link-card" href="04_model_evaluation_report.html"><b>04 · Đánh giá</b><span>PSNR, SSIM và so sánh phương pháp.</span></a>
+    <a class="link-card" href="02_feature_pipeline_report.html"><b>02 · NAFNet pipeline</b><span>Luồng xử lý của mô hình chính.</span></a>
+    <a class="link-card" href="03_model_training_report.html"><b>03 · Huấn luyện NAFNet</b><span>Kiến trúc, cấu hình và checkpoint.</span></a>
+    <a class="link-card" href="04_model_evaluation_report.html"><b>04 · Đánh giá</b><span>NAFNet so với Wiener và DeblurGAN.</span></a>
   </div></section>
   <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>
 </main>

@@ -61,21 +61,21 @@ pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2
 <a href="02_feature_pipeline_report.html" class="active">Pipeline</a>
 <a href="03_model_training_report.html" class="">Huấn luyện</a>
 <a href="04_model_evaluation_report.html" class="">Đánh giá</a></nav></div>
-<header class="hero"><span class="eyebrow">02 · FEATURE PIPELINE REPORT</span>
-    <h1>Pipeline xử lý ảnh</h1>
-    <p>Luồng xử lý kết hợp bộ lọc Wiener làm đầu vào tham khảo và CNN dự đoán phần hiệu chỉnh.</p>
+<header class="hero"><span class="eyebrow">02 · NAFNET PIPELINE</span>
+    <h1>Pipeline mô hình chính: NAFNet</h1>
+    <p>NAFNet học ánh xạ trực tiếp từ ảnh blur sang ảnh sharp. Wiener Filter và DeblurGAN được đánh giá riêng làm baseline.</p>
   </header>
   <section><h2>Luồng dữ liệu</h2><div class="steps">
-    <div class="step"><b>1. Đọc cặp ảnh</b> — ảnh RGB blur và sharp được chuẩn hóa về [0, 1].</div>
-    <div class="step"><b>2. Crop train</b> — lấy crop ngẫu nhiên đồng bộ trên ảnh blur/sharp; validation và test dùng center crop hoặc toàn ảnh theo cấu hình.</div>
-    <div class="step"><b>3. Wiener Filter</b> — lọc từng kênh để tạo ảnh tham khảo bổ sung.</div>
-    <div class="step"><b>4. CNN residual</b> — CNN nhận ảnh blur và Wiener, dự đoán phần hiệu chỉnh cộng vào ảnh blur.</div>
-    <div class="step"><b>5. Đánh giá/lưu</b> — đầu ra được giới hạn trong [0, 1], tính PSNR và SSIM so với sharp.</div>
+    <div class="step"><b>1. Đọc cặp ảnh</b> — ảnh RGB blur/sharp được chuẩn hóa về [0, 1].</div>
+    <div class="step"><b>2. Crop train</b> — crop ngẫu nhiên 256×256 đồng bộ cho ảnh blur/sharp; validation dùng toàn ảnh.</div>
+    <div class="step"><b>3. NAFNet</b> — encoder-decoder có NAFBlock, SimpleGate và simplified channel attention dự đoán ảnh khôi phục.</div>
+    <div class="step"><b>4. Padding/crop</b> — kích thước được đệm chia hết cho 8 khi cần; đầu ra được cắt về kích thước ban đầu.</div>
+    <div class="step"><b>5. Đánh giá</b> — so ảnh NAFNet với sharp bằng L1, PSNR và các metric trong benchmark.</div>
   </div></section>
   <section><h2>Đầu vào và đầu ra mô hình</h2>
-    <p><code>input = concat(blur, wiener)</code> có 6 kênh; CNN dự đoán correction 3 kênh.</p>
-    <pre>restored = clamp(blur + CNN(concat(blur, wiener)), 0, 1)</pre>
-    <p class="muted">Cài đặt tương ứng nằm trong <code>src/dataset.py</code>, <code>src/wiener.py</code> và <code>src/model.py</code>.</p>
+    <pre>restored = clamp(NAFNet(blur), 0, 1)</pre>
+    <p>Wiener Filter và DeblurGAN không nằm trong đường truyền NAFNet; mỗi baseline xử lý ảnh blur độc lập để so sánh công bằng trên cùng tập test.</p>
+    <p class="muted">Cài đặt NAFNet: <code>scripts/train_nafnet.py</code>; đánh giá so sánh: <code>scripts/evaluate_deblurring.py</code>.</p>
   </section>
   <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>
 </main>

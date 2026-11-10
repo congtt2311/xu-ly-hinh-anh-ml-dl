@@ -6,7 +6,7 @@ Hệ thống Khôi phục và Làm nét ảnh mờ Chuyển động (Motion Debl
 ## 2. Problem
 Khôi phục chất lượng hình ảnh bị mờ do chuyển động (Motion Blur), chuyển đổi ảnh mờ thành ảnh rõ nét và đánh giá định lượng hiệu năng giữa thuật toán Học máy cổ điển và các mô hình Học sâu hiện đại.
 - **Dữ liệu thực nghiệm:** GoPro Large gồm 3.214 cặp ảnh trong manifest: 1.923 train, 180 validation và 1.111 test. Ảnh nằm trong `data/raw/GOPRO_Large/`; manifest ở `data/processed/gopro_manifest.csv`.
-- **Phạm vi triển khai chính:** Wiener Filter kết hợp CNN residual, huấn luyện bằng PyTorch, đánh giá PSNR/SSIM và giao diện Streamlit. DeblurGAN và NAFNet có mã nguồn riêng, không phải mô hình mặc định trong luồng train/evaluate này.
+- **Mô hình chính:** NAFNet huấn luyện trên GoPro để khử mờ chuyển động. Wiener Filter (cổ điển) và DeblurGAN (học sâu) là hai baseline dùng để so sánh.
 
 ## 3. Target User
 - Giảng viên và sinh viên bộ môn Thị giác máy tính / Xử lý ảnh (đánh giá, so sánh hiệu năng giữa phương pháp xử lý tần số cổ điển và mô hình Deep Learning SOTA).
@@ -17,10 +17,12 @@ Khôi phục chất lượng hình ảnh bị mờ do chuyển động (Motion B
 - **Output:** Ảnh đã được làm nét (`Image_Deblurred`) kèm bảng thống kê các chỉ số chất lượng định lượng (**PSNR**, **SSIM**) và thời gian xử lý (**Latency** tính bằng miligiây/giây).
 
 ## 5. Core Features
-- **Khôi phục ảnh:** CNN residual nhận ảnh blur cùng ảnh Wiener để dự đoán phần hiệu chỉnh; Wiener Filter cũng được đánh giá như baseline.
+- **Khôi phục đa phương pháp:** NAFNet là mô hình trọng tâm; Wiener Filter và DeblurGAN là các mốc so sánh độc lập.
 - **Đánh giá định lượng tự động:** Hệ thống tự động tính toán các chỉ số PSNR (Peak Signal-to-Noise Ratio), SSIM (Structural Similarity Index) và Latency đối chiếu trực tiếp với ảnh gốc (Ground Truth).
 - **Phân bổ mã nguồn & Tài liệu mô tả:**
-  - `src/wiener.py`, `src/model.py`, `src/engine.py`: lọc Wiener, CNN residual và vòng lặp train/validation.
+  - `scripts/train_nafnet.py`: huấn luyện NAFNet trên GoPro.
+  - `scripts/evaluate_deblurring.py`: so sánh NAFNet, Wiener và DeblurGAN trên cùng tập test.
+  - `src/wiener.py`, `src/model.py`, `src/engine.py`: Wiener Filter và pipeline CNN residual phụ trợ.
   - `src/metrics.py`: các chỉ số PSNR và SSIM.
   - `evaluate.py`, `predict.py`, `app.py`: đánh giá, phục hồi ảnh đơn và giao diện Streamlit.
   - `docs/description/algorithms/`: tài liệu về Wiener Filter, DeblurGAN và NAFNet.
@@ -28,7 +30,7 @@ Khôi phục chất lượng hình ảnh bị mờ do chuyển động (Motion B
 
 ## 6. Technology Constraints
 - **Môi trường & Thư viện:** Python 3.10+, PyTorch, OpenCV, NumPy, SciPy, Scikit-image và Streamlit (xem `requirements.txt`).
-- **Cấu trúc lưu trữ:** Checkpoint CNN lưu tại `checkpoints/`; trọng số cho các mô hình bổ sung lưu theo hướng dẫn tương ứng.
+- **Cấu trúc lưu trữ:** Checkpoint NAFNet lưu tại `weights/NAFNet-GoPro-width32.pth`; checkpoint các baseline lưu theo cấu hình tương ứng.
 - **Thực thi & Triển khai:**
   - Khởi chạy ứng dụng Web Demo:
     ```bash
@@ -63,7 +65,7 @@ Khôi phục chất lượng hình ảnh bị mờ do chuyển động (Motion B
    - *Cải tiến:* Sử dụng **Simplified Channel Attention (SCA)** giúp tối ưu tốc độ và đạt chỉ số PSNR/SSIM vượt trội trên bộ GoPro.
 
 ### B. Đánh giá & Kiểm định (Evaluation)
-- **Bộ dữ liệu kiểm thử:** Manifest hiện có 1.111 cặp ảnh thuộc tập test GoPro. Có thể dùng `python evaluate.py --limit 0` để đánh giá toàn bộ khi đã huấn luyện CNN.
+- **Bộ dữ liệu kiểm thử:** Manifest hiện có 1.111 cặp ảnh thuộc tập test GoPro. Dùng `python scripts/evaluate_deblurring.py --method all` để so sánh khi đã có checkpoint tương ứng.
 - **Chỉ số đánh giá:**
   - **PSNR (dB):** Đo lường tỷ lệ tín hiệu trên nhiễu đỉnh.
   - **SSIM:** Đo độ tương đồng cấu trúc thị giác giữa ảnh khôi phục và ảnh gốc.
