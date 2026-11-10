@@ -99,8 +99,12 @@ class GoProDeblurDataset(Dataset[dict[str, Any]]):
                     f"Crop {self.crop_size} exceeds image size {(height, width)} "
                     f"for {row['sequence']}/{blur_path.name}"
                 )
-            top = int(torch.randint(height - crop_height + 1, ()).item())
-            left = int(torch.randint(width - crop_width + 1, ()).item())
+            if self.split == "train":
+                top = int(torch.randint(height - crop_height + 1, ()).item())
+                left = int(torch.randint(width - crop_width + 1, ()).item())
+            else:
+                top = (height - crop_height) // 2
+                left = (width - crop_width) // 2
             blur = blur[top : top + crop_height, left : left + crop_width]
             sharp = sharp[top : top + crop_height, left : left + crop_width]
 

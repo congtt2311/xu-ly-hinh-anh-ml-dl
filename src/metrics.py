@@ -20,6 +20,8 @@ def calculate_ssim(prediction, target):
     target = np.clip(target, 0.0, 1.0)
 
     min_size = min(prediction.shape[0], prediction.shape[1])
+    if min_size < 3:
+        raise ValueError("SSIM requires images with height and width of at least 3.")
     win_size = min(7, min_size)
 
     if win_size % 2 == 0:

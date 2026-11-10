@@ -1,8 +1,8 @@
 
 from pathlib import Path
-import cv2
 import numpy as np
 import torch
+from PIL import Image
 
 from src.model import CNNWienerDeblur
 from src.wiener import apply_wiener
@@ -37,17 +37,19 @@ def load_model(checkpoint_path, device):
 
 
 def restore_image(image_path, model, device, wiener_size=5):
-    image = cv2.imread(str(image_path))
-
-    if image is None:
+    try:
+        with Image.open(image_path) as source:
+            image = np.asarray(source.convert("RGB"))
+    except (OSError, ValueError) as error:
         raise FileNotFoundError(
             f"Khong doc duoc anh: {image_path}"
-        )
-
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        ) from error
     image = image.astype(np.float32) / 255.0
 
     wiener_image = apply_wiener(image, wiener_size)
+
+    if model is None:
+        return image, wiener_image, wiener_image
 
     blur_tensor = torch.from_numpy(
         image.copy()
@@ -71,7 +73,10 @@ def save_image(image, output_path):
     output_path = Path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
-    image = np.clip(image * 255.0, 0, 255).astype(np.uint8)
-    image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
-
-    cv2.imwrite(str(output_path), image)
+    try:
+        Image.fromarray(
+            np.clip(image * 255.0, 0, 255).astype(np.uint8),
+            mode="RGB",
+        ).save(output_path)
+    except OSError as error:
+        raise OSError(f"Khong the luu anh: {output_path}") from error

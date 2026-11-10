@@ -1,44 +1,51 @@
 
 import argparse
-import random
 import numpy as np
 import torch
 
-from torch.utils.data import DataLoader, random_split, Subset
+from torch.utils.data import DataLoader, Subset
 
 from config import (
-    TRAIN_PATH,
     CHECKPOINT_PATH,
     IMAGE_SIZE,
     BATCH_SIZE,
     EPOCHS,
     LEARNING_RATE,
     WIENER_SIZE,
-    NUM_WORKERS
+    NUM_WORKERS,
+    MANIFEST_PATH,
 )
 
-from src.dataset import GoProDataset
+from scripts.gopro_dataset import GoProDeblurDataset
 from src.model import CNNWienerDeblur
 from src.engine import train_one_epoch, validate
 
 
 def main():
-
     parser = argparse.ArgumentParser()
 
     parser.add_argument("--epochs", type=int, default=EPOCHS)
     parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
     parser.add_argument("--patch-size", type=int, default=IMAGE_SIZE)
     parser.add_argument("--limit", type=int, default=0)
+    parser.add_argument("--seed", type=int, default=42)
 
     args = parser.parse_args()
 
-    random.seed(42)
-    np.random.seed(42)
-    torch.manual_seed(42)
+    if args.epochs < 1:
+        parser.error("--epochs must be at least 1")
+    if args.batch_size < 1:
+        parser.error("--batch-size must be at least 1")
+    if args.patch_size < 1:
+        parser.error("--patch-size must be at least 1")
+    if args.limit < 0:
+        parser.error("--limit cannot be negative")
+
+    np.random.seed(args.seed)
+    torch.manual_seed(args.seed)
 
     if torch.cuda.is_available():
-        torch.cuda.manual_seed_all(42)
+        torch.cuda.manual_seed_all(args.seed)
 
     device = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
@@ -52,54 +59,34 @@ def main():
             torch.cuda.get_device_name(0)
         )
 
-    train_dataset = GoProDataset(
-        TRAIN_PATH,
-        patch_size=args.patch_size,
-        training=True
+    train_dataset = GoProDeblurDataset(
+        "train",
+        manifest_path=MANIFEST_PATH,
+        crop_size=args.patch_size,
     )
 
-    val_dataset = GoProDataset(
-        TRAIN_PATH,
-        patch_size=args.patch_size,
-        training=False
+    val_dataset = GoProDeblurDataset(
+        "valid",
+        manifest_path=MANIFEST_PATH,
     )
 
     if args.limit > 0:
-        limit = min(args.limit, len(train_dataset))
-
-        train_dataset.pairs = train_dataset.pairs[:limit]
-        val_dataset.pairs = val_dataset.pairs[:limit]
-
-    if len(train_dataset) < 2:
-        raise RuntimeError(
-            "Can it nhat 2 cap anh de huan luyen."
+        train_dataset = Subset(
+            train_dataset,
+            range(min(args.limit, len(train_dataset))),
+        )
+        val_dataset = Subset(
+            val_dataset,
+            range(min(args.limit, len(val_dataset))),
         )
 
-    val_count = max(
-        1,
-        int(len(train_dataset) * 0.1)
-    )
-
-    train_count = len(train_dataset) - val_count
-
-    train_split, val_split = random_split(
-        range(len(train_dataset)),
-        [train_count, val_count],
-        generator=torch.Generator().manual_seed(42)
-    )
-
-    train_data = Subset(
-        train_dataset,
-        train_split.indices
-    )
-
-    val_data = Subset(
-        val_dataset,
-        val_split.indices
-    )
+    if not len(train_dataset) or not len(val_dataset):
+        raise RuntimeError(
+            "Training and validation splits must both contain image pairs."
+        )
 
     train_loader = DataLoader(
-        train_data,
+        train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=NUM_WORKERS,
@@ -107,7 +94,7 @@ def main():
     )
 
     val_loader = DataLoader(
-        val_data,
+        val_dataset,
         batch_size=1,
         shuffle=False,
         num_workers=NUM_WORKERS
@@ -172,7 +159,10 @@ def main():
             "val_loss": val_loss,
             "wiener_size": WIENER_SIZE,
             "features": 64,
-            "num_blocks": 8
+            "num_blocks": 8,
+            "seed": args.seed,
+            "train_pairs": len(train_dataset),
+            "validation_pairs": len(val_dataset),
         }
 
         torch.save(

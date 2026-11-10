@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Báo cáo dữ liệu | Hệ thống khử mờ ảnh</title>
+  <style>
+:root{color-scheme:light;--ink:#172554;--muted:#64748b;--blue:#2563eb;--line:#dbe4f0;--bg:#f3f6fb;--green:#059669;--amber:#b45309}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:#1e293b;font:15px/1.65 "Segoe UI",Arial,sans-serif}
+.layout{max-width:1120px;margin:26px auto;padding:0 20px}
+.topbar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:18px}
+.brand{color:var(--ink);font-weight:800;text-decoration:none}
+nav{display:flex;flex-wrap:wrap;gap:7px}
+nav a{padding:7px 10px;border-radius:8px;color:#475569;text-decoration:none;font-size:13px}
+nav a:hover,nav a.active{background:#dbeafe;color:#1d4ed8}
+.hero{padding:36px;border-radius:18px;color:white;background:linear-gradient(120deg,#102a56,#2563eb)}
+.eyebrow{color:#bfdbfe;font-size:11px;font-weight:800;letter-spacing:.14em}
+h1{margin:8px 0;font-size:clamp(28px,4vw,40px);line-height:1.15}
+.hero p{max-width:780px;margin:0;color:#dbeafe}
+.pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:18px}
+.pill{padding:5px 11px;border:1px solid #ffffff55;border-radius:99px;font-size:13px}
+section,.panel{margin-top:18px;padding:22px;border:1px solid var(--line);border-radius:14px;background:white;box-shadow:0 8px 26px #0f172a0a}
+h2{margin:0 0 12px;color:var(--ink);font-size:21px}
+h3{margin:0 0 8px;color:var(--ink);font-size:17px}
+p{margin:8px 0}
+.muted,.caption{color:var(--muted)}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:12px}
+.stat,.link-card{padding:17px;border:1px solid var(--line);border-radius:12px;background:#f8fafc}
+.stat strong{display:block;color:var(--ink);font-size:25px}
+.stat span{color:var(--muted);font-size:13px}
+.link-card{display:block;color:inherit;text-decoration:none}
+.link-card:hover{border-color:#93c5fd;background:#eff6ff}
+.link-card b{display:block;margin-bottom:4px;color:#1d4ed8}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;text-align:left}
+th,td{padding:11px 13px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{background:#f8fafc;color:#334155}
+.note{margin-top:14px;padding:13px 15px;border-left:4px solid #f59e0b;background:#fffbeb}
+.ok{border-left-color:var(--green);background:#ecfdf5}
+.steps{display:grid;gap:10px}
+.step{padding:14px 16px;border:1px solid var(--line);border-radius:11px;background:#f8fafc}
+.step b{color:#1d4ed8}
+code,pre{font-family:Consolas,"Courier New",monospace}
+pre{overflow-x:auto;padding:14px;border-radius:10px;background:#0f172a;color:#e2e8f0}
+.chart{display:block;width:100%;max-width:760px}
+.chart-label{fill:#334155;font-size:14px}
+.chart-value{fill:#0f172a;font-size:13px;font-weight:600}
+.bar-track{fill:#e8eef8}
+.bar{fill:var(--blue)}
+.footer{padding:20px 4px;color:var(--muted);font-size:12px}
+@media(max-width:700px){.layout{margin:14px auto;padding:0 12px}.topbar{align-items:flex-start;flex-direction:column}.hero{padding:25px 21px}section,.panel{padding:17px}}
+@media print{body{background:white}.layout{margin:0 auto}section,.panel{break-inside:avoid;box-shadow:none}}
+</style>
+</head>
+<body>
+<main class="layout">
+  <div class="topbar"><a class="brand" href="index.html">GOPRO · DEBLUR REPORT</a>
+    <nav aria-label="Điều hướng báo cáo"><a href="index.html" class="">Tổng quan</a>
+<a href="01_data_report.html" class="active">Dữ liệu</a>
+<a href="02_feature_pipeline_report.html" class="">Pipeline</a>
+<a href="03_model_training_report.html" class="">Huấn luyện</a>
+<a href="04_model_evaluation_report.html" class="">Đánh giá</a></nav></div>
+<header class="hero"><span class="eyebrow">01 · DATA REPORT</span>
+    <h1>Dữ liệu GoPro Large</h1>
+    <p>Dữ liệu ảnh mờ chuyển động và ảnh sharp tham chiếu dùng cho bài toán image deblurring.</p>
+  </header>
+  <section><h2>Phân chia dữ liệu</h2>
+    <div class="table-wrap"><table><thead><tr><th>Tập dữ liệu</th><th>Số cặp ảnh</th></tr></thead>
+      <tbody><tr><td>Train</td><td>1,923</td></tr>
+<tr><td>Validation</td><td>180</td></tr>
+<tr><td>Test</td><td>1,111</td></tr><tr><th>Tổng</th><th>3,214</th></tr></tbody>
+    </table></div><p class="note ok">Manifest có 33 sequence (tính riêng theo từng split); các ảnh blur/sharp được ghép theo cùng tên tệp.</p>
+    <p class="muted">Nguồn manifest: <code>D:\ĐỒ ÁN XLHA\data\processed\gopro_manifest.csv</code>.</p>
+  </section>
+  <section><h2>Cấu trúc mỗi cặp</h2><div class="steps">
+    <div class="step"><b>Blur</b> — ảnh đầu vào bị nhòe chuyển động.</div>
+    <div class="step"><b>Sharp</b> — ảnh mục tiêu tương ứng, dùng làm ground truth.</div>
+    <div class="step"><b>Blur gamma</b> — biến thể ảnh mờ được lưu trong dataset; pipeline hiện tại dùng thư mục blur.</div>
+  </div></section>
+  <section><h2>Quy tắc sử dụng</h2>
+    <p>Train và validation được tách theo sequence trong manifest; tập test giữ riêng để đánh giá.</p>
+    <p class="muted">Các số lượng trên được đọc trực tiếp từ manifest khi tạo báo cáo.</p>
+  </section>
+  <footer class="footer">Báo cáo dự án xử lý ảnh · Tạo ngày 10/11/2026</footer>
+</main>
+</body>
+</html>

@@ -1,15 +1,15 @@
-<<<<<<< HEAD
+# Python
 __pycache__/
 *.py[cod]
+*.pyo
+
+# Virtual environments and local settings
 .venv/
 venv/
+env/
 .env
-data/
-checkpoints/
-checkoints/
-outputs/prediction/
-*.log
-=======
+
+# Raw and generated datasets; keep project code and manifests in Git
 data/raw/*
 !data/raw/.gitkeep
 !data/raw/image_data.csv
@@ -17,42 +17,20 @@ data/processed/*
 !data/processed/.gitkeep
 !data/processed/manifest.csv
 !data/processed/gopro_manifest.csv
-results/*
-
-# Model checkpoints (large, regenerate by training)
-*.pth
->>>>>>> origin/main
-# Python
-__pycache__/
-*.py[cod]
-*.pyo
-
-# Virtual environments
-.venv/
-venv/
-env/
-
-# Environment variables
-.env
-
-# Dataset
-data/
 
 # Model checkpoints
 checkpoints/
 checkoints/
+weights/
 *.pth
 *.pt
 
-# Generated predictions
+# Generated outputs
 outputs/prediction/
-
-# Logs
+results/*
 *.log
 
-# IDE
+# IDE and OS
 .vscode/
-
-# OS
 .DS_Store
 Thumbs.db

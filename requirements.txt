@@ -5,4 +5,7 @@ scikit-image
 Pillow
 tqdm
 streamlit
+torch>=2.1
+pandas
+matplotlib
 matplotlib

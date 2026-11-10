@@ -3,13 +3,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 
-DATASET_PATH = ROOT / "data" / "GOPRO_Large" / "GOPRO_Large"
+DATASET_PATH = ROOT / "data" / "raw" / "GOPRO_Large"
 
 TRAIN_PATH = DATASET_PATH / "train"
 TEST_PATH = DATASET_PATH / "test"
+MANIFEST_PATH = ROOT / "data" / "processed" / "gopro_manifest.csv"
 
 CHECKPOINT_PATH = ROOT / "checkpoints"
 OUTPUT_PATH = ROOT / "outputs"
+IMAGE_OUTPUT_PATH = ROOT / "docs" / "images"
+REPORT_PATH = ROOT / "docs" / "report"
 
 IMAGE_SIZE = 128
 

@@ -6,6 +6,12 @@ from tqdm import tqdm
 from .wiener import batch_wiener
 
 
+def _unpack_batch(batch):
+    if isinstance(batch, dict):
+        return batch["input"], batch["target"]
+    return batch
+
+
 def train_one_epoch(
     model,
     loader,
@@ -23,7 +29,8 @@ def train_one_epoch(
         desc="Training"
     )
 
-    for blur, sharp in progress:
+    for batch in progress:
+        blur, sharp = _unpack_batch(batch)
 
         blur = blur.to(device)
         sharp = sharp.to(device)
@@ -70,10 +77,11 @@ def validate(
 
     total_loss = 0.0
 
-    for blur, sharp in tqdm(
+    for batch in tqdm(
         loader,
         desc="Validation"
     ):
+        blur, sharp = _unpack_batch(batch)
 
         blur = blur.to(device)
         sharp = sharp.to(device)

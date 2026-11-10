@@ -8,18 +8,36 @@ import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 
-from config import TEST_PATH, CHECKPOINT_PATH, WIENER_SIZE, NUM_WORKERS
-from src.dataset import GoProDataset
+from config import (
+    CHECKPOINT_PATH,
+    MANIFEST_PATH,
+    NUM_WORKERS,
+    OUTPUT_PATH,
+    WIENER_SIZE,
+)
+from scripts.gopro_dataset import GoProDeblurDataset
 from src.model import CNNWienerDeblur
 from src.wiener import batch_wiener
 from src.metrics import evaluate_metrics
+from src.report import generate_multipage_report
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--limit", type=int, default=10)
-    parser.add_argument("--patch-size", type=int, default=128)
+    parser.add_argument(
+        "--patch-size",
+        type=int,
+        default=128,
+        help="Center-crop size; use 0 to evaluate full-resolution images.",
+    )
+    parser.add_argument("--manifest", type=Path, default=MANIFEST_PATH)
     args = parser.parse_args()
+
+    if args.limit < 0:
+        parser.error("--limit cannot be negative")
+    if args.patch_size < 0:
+        parser.error("--patch-size cannot be negative")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
@@ -48,14 +66,17 @@ def main():
 
     wiener_size = checkpoint.get("wiener_size", WIENER_SIZE)
 
-    dataset = GoProDataset(
-        TEST_PATH,
-        patch_size=args.patch_size,
-        training=False
+    dataset = GoProDeblurDataset(
+        "test",
+        manifest_path=args.manifest,
+        crop_size=args.patch_size or None,
     )
 
     if args.limit > 0:
-        dataset.pairs = dataset.pairs[:args.limit]
+        dataset = torch.utils.data.Subset(
+            dataset,
+            range(min(args.limit, len(dataset))),
+        )
 
     loader = DataLoader(
         dataset,
@@ -71,7 +92,9 @@ def main():
     }
 
     with torch.no_grad():
-        for blur, sharp in tqdm(loader, desc="Evaluating"):
+        for batch in tqdm(loader, desc="Evaluating"):
+            blur = batch["input"]
+            sharp = batch["target"]
             blur = blur.to(device)
             sharp = sharp.to(device)
 
@@ -117,7 +140,7 @@ def main():
             "SSIM": ssim
         })
 
-    output_dir = Path("outputs")
+    output_dir = OUTPUT_PATH
     output_dir.mkdir(parents=True, exist_ok=True)
 
     output_path = output_dir / "evaluation_results.csv"
@@ -125,12 +148,20 @@ def main():
     with open(output_path, "w", newline="", encoding="utf-8-sig") as file:
         writer = csv.DictWriter(
             file,
-            fieldnames=["Method", "PSNR", "SSIM"]
+            fieldnames=["Method", "Images", "PSNR", "SSIM"]
         )
         writer.writeheader()
+        for row in final_results:
+            row["Images"] = len(results[row["Method"]])
         writer.writerows(final_results)
 
-    print(f"\nDa luu ket qua CSV: {output_path}")
+    report_path = generate_multipage_report(
+        output_path,
+        manifest_path=args.manifest,
+    )
+
+    print(f"\nDa luu ket qua CSV: {output_path.relative_to(Path(__file__).resolve().parent)}")
+    print(f"Da tao bao cao HTML: {report_path.relative_to(Path(__file__).resolve().parent)}")
     print("\nEvaluation completed!")
 
 

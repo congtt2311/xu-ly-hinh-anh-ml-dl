@@ -12,7 +12,7 @@ import torch
 
 from PIL import Image, ImageDraw, ImageFont, ImageOps
 
-from config import CHECKPOINT_PATH
+from config import CHECKPOINT_PATH, WIENER_SIZE
 from src.inference import load_model, restore_image
 from src.metrics import evaluate_metrics
 
@@ -25,17 +25,17 @@ st.set_page_config(
 
 
 @st.cache_resource
-def get_model():
+def get_model(checkpoint_mtime=None):
     device = torch.device(
         "cuda" if torch.cuda.is_available() else "cpu"
     )
 
     model_path = CHECKPOINT_PATH / "best_model.pth"
 
-    model, wiener_size = load_model(
-        model_path,
-        device
-    )
+    if model_path.is_file():
+        model, wiener_size = load_model(model_path, device)
+    else:
+        model, wiener_size = None, WIENER_SIZE
 
     return model, wiener_size, device
 
@@ -192,13 +192,10 @@ st.divider()
 checkpoint_path = CHECKPOINT_PATH / "best_model.pth"
 
 if not checkpoint_path.exists():
-
-    st.error(
-        "Không tìm thấy best_model.pth. "
-        "Hãy huấn luyện mô hình trước."
+    st.warning(
+        "Chưa có checkpoint CNN. Ứng dụng vẫn chạy Wiener Filter; "
+        "hãy huấn luyện mô hình để bật CNN + Wiener."
     )
-
-    st.stop()
 
 
 uploaded_blur = st.file_uploader(
@@ -238,7 +235,10 @@ if st.button(
             blur_array
         ).save(temp_path)
 
-        model, wiener_size, device = get_model()
+        checkpoint_mtime = (
+            checkpoint_path.stat().st_mtime if checkpoint_path.is_file() else None
+        )
+        model, wiener_size, device = get_model(checkpoint_mtime)
 
         with st.spinner("Đang khôi phục ảnh..."):
 
@@ -253,6 +253,7 @@ if st.button(
 
             processing_time = time.time() - start_time
 
+        restored_label = "CNN + Wiener" if model is not None else "Wiener (fallback)"
         st.success(
             "Khôi phục ảnh thành công!"
         )
@@ -264,9 +265,9 @@ if st.button(
 
         st.subheader("Kết quả khôi phục ảnh")
 
-        col1, col2, col3 = st.columns(3)
+        image_columns = st.columns(3 if model is not None else 2)
 
-        with col1:
+        with image_columns[0]:
 
             st.image(
                 original,
@@ -274,7 +275,7 @@ if st.button(
                 use_container_width=True
             )
 
-        with col2:
+        with image_columns[1]:
 
             st.image(
                 wiener_image,
@@ -282,13 +283,13 @@ if st.button(
                 use_container_width=True
             )
 
-        with col3:
-
-            st.image(
-                restored,
-                caption="CNN + Wiener",
-                use_container_width=True
-            )
+        if model is not None:
+            with image_columns[2]:
+                st.image(
+                    restored,
+                    caption=restored_label,
+                    use_container_width=True
+                )
 
         st.download_button(
             label="Tải ảnh đã khôi phục",
@@ -331,13 +332,10 @@ if st.button(
 
             st.divider()
 
-            st.subheader(
-                "Đánh giá chất lượng ảnh"
-            )
+            st.subheader("Đánh giá chất lượng ảnh")
+            metric_columns = st.columns(3 if model is not None else 2)
 
-            metric_col1, metric_col2, metric_col3 = st.columns(3)
-
-            with metric_col1:
+            with metric_columns[0]:
 
                 st.metric(
                     "Blur PSNR",
@@ -349,7 +347,7 @@ if st.button(
                     f"{blur_metrics['SSIM']:.4f}"
                 )
 
-            with metric_col2:
+            with metric_columns[1]:
 
                 st.metric(
                     "Wiener PSNR",
@@ -361,17 +359,16 @@ if st.button(
                     f"{wiener_metrics['SSIM']:.4f}"
                 )
 
-            with metric_col3:
-
-                st.metric(
-                    "CNN + Wiener PSNR",
-                    f"{restored_metrics['PSNR']:.4f} dB"
-                )
-
-                st.metric(
-                    "CNN + Wiener SSIM",
-                    f"{restored_metrics['SSIM']:.4f}"
-                )
+            if model is not None:
+                with metric_columns[2]:
+                    st.metric(
+                        "CNN + Wiener PSNR",
+                        f"{restored_metrics['PSNR']:.4f} dB"
+                    )
+                    st.metric(
+                        "CNN + Wiener SSIM",
+                        f"{restored_metrics['SSIM']:.4f}"
+                    )
 
             st.divider()
 
@@ -385,19 +382,16 @@ if st.button(
                 use_container_width=True
             )
 
+            comparison_images = [original, wiener_image]
+            comparison_labels = ["1. Blur", "2. Wiener Filter"]
+            if model is not None:
+                comparison_images.append(restored)
+                comparison_labels.append("3. CNN + Wiener")
+            comparison_images.append(sharp_array)
+            comparison_labels.append("Sharp Ground Truth")
             comparison_image = create_comparison_image(
-                [
-                    original,
-                    wiener_image,
-                    restored,
-                    sharp_array
-                ],
-                [
-                    "1. Blur",
-                    "2. Wiener Filter",
-                    "3. CNN + Wiener",
-                    "4. Sharp Ground Truth"
-                ]
+                comparison_images,
+                comparison_labels
             )
 
             st.divider()
@@ -421,7 +415,7 @@ if st.button(
             st.download_button(
                 label="Tải ảnh so sánh 4 phương pháp",
                 data=comparison_buffer.getvalue(),
-                file_name="comparison_cnn_wiener.png",
+                file_name="image_comparison.png",
                 mime="image/png"
             )
 
@@ -447,9 +441,11 @@ if st.button(
                 index=[
                     "Blur",
                     "Wiener",
-                    "CNN + Wiener"
+                    restored_label
                 ]
             )
+            if model is None:
+                chart_data = chart_data.iloc[:2]
 
             chart_col1, chart_col2 = st.columns(2)
 
