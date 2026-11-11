@@ -1,116 +1,123 @@
+# GoPro Motion Deblurring
 
-# CNN + Wiener Filter for Image Deblurring
+NAFNet is the primary model for restoring motion-blurred images. Wiener Filter
+and DeblurGAN are comparison baselines. The project includes GoPro data
+preparation, model training and evaluation, a Streamlit app, and HTML reports.
 
-## 1. Introduction
+## 1. Dataset
 
-This project develops a hybrid image deblurring system using a Wiener Filter and a Convolutional Neural Network (CNN).
+Extract GoPro Large under `data/raw/GOPRO_Large/`. The project manifest contains
+3,214 aligned blur/sharp pairs:
 
-The system aims to restore sharp images from blurred input images.
+| Split | Pairs |
+|---|---:|
+| Train | 1,923 |
+| Validation | 180 |
+| Test | 1,111 |
 
-## 2. Dataset
+Create or refresh the manifest with:
 
-Dataset: GoPro Large Dataset
-
-- Training images: 2,103 pairs
-- Testing images: 1,111 pairs
-- Blur: Blurred input images
-- Sharp: Ground-truth sharp images
-
-Dataset structure:
-
-data/GOPRO_Large/GOPRO_Large/
-- train/
-- test/
-
-## 3. Proposed Method
-
-The proposed system combines two methods:
-
-### Wiener Filter
-A traditional image processing technique used to reduce noise and improve image quality.
-
-### CNN
-A deep learning model that learns image restoration from paired blurred and sharp images.
-
-The CNN receives:
-- Original blurred image
-- Wiener-filtered image
-
-The CNN predicts a correction to restore the image.
-
-## 4. Model Training
-
-- Framework: PyTorch
-- Model: CNN with Residual Blocks
-- Loss Function: L1 Loss
-- Optimizer: Adam
-- Learning Rate: 0.0001
-- Training device: CPU or CUDA when available
-
-## 5. Evaluation Metrics
-
-Two metrics are used:
-
-- PSNR: Peak Signal-to-Noise Ratio
-- SSIM: Structural Similarity Index
-
-## 6. Experimental Results
-
-| Method | PSNR (dB) | SSIM |
-|---|---:|---:|
-| Blur | 26.0938 | 0.7631 |
-| Wiener | 25.1743 | 0.7264 |
-| CNN + Wiener | 26.1177 | 0.7637 |
-
-Evaluation uses 128x128 center crops from the test images.
-
-## 7. Project Structure
-
-- train.py: Train the CNN model
-- evaluate.py: Evaluate model performance
-- predict.py: Restore an input image
-- visualize.py: Generate comparison charts
-- app.py: Streamlit demonstration
-- src/: Model, dataset, Wiener Filter and metrics
-- checkpoints/: Saved model weights
-- outputs/: Evaluation results and charts
-
-## 8. Installation
-
-Install dependencies:
-
-```bash
-py -3.11 -m pip install -r requirements.txt
+```powershell
+python data\scripts\prepare_gopro.py
 ```
 
-## 9. Run the Project
+The script writes `data/processed/gopro_manifest.csv`. Keep the test split
+separate from training.
 
-Train:
+## 2. Models and Evaluation
 
-```bash
-py -3.11 train.py --epochs 3 --batch-size 1 --patch-size 128 --limit 200
+- **NAFNet:** primary deep-learning model, trained on GoPro.
+- **Wiener Filter:** classical image-processing baseline.
+- **DeblurGAN:** deep-learning baseline.
+
+Models are compared on the same GoPro test images using PSNR, SSIM, and
+inference time. NAFNet and DeblurGAN require their respective trained
+checkpoints before they can be evaluated.
+
+## 3. Project Structure
+
+```text
+.
+├── app.py                         # Streamlit image-restoration app
+├── data/
+│   ├── raw/GOPRO_Large/           # Extracted dataset (not tracked by Git)
+│   ├── processed/                 # Dataset manifests
+│   └── scripts/                   # Dataset preparation and analysis
+├── docs/
+│   ├── description/               # Project and algorithm documentation
+│   ├── images/                    # Evaluation charts
+│   └── report/                    # Multi-page HTML report
+├── models/algorithms/             # Wiener Filter, NAFNet, and DeblurGAN
+├── outputs/                       # Existing evaluation CSV and charts
+├── results/                       # Generated demo and evaluation outputs
+├── scripts/                       # GoPro training and comparison evaluation
+├── src/                           # Shared data, inference, and metric utilities
+├── train.py                       # Supporting CNN training pipeline
+├── evaluate.py                    # Supporting CNN evaluation pipeline
+├── generate_report.py             # HTML report generator
+└── xu-ly-hinh-anh-ml-dl/           # Additional ML/DL experiment code
 ```
 
-Evaluate:
+## 4. Installation
 
-```bash
-py -3.11 evaluate.py --limit 0 --patch-size 128
+From the repository root, install the dependencies:
+
+```powershell
+python -m pip install -r requirements.txt
 ```
 
-Generate charts:
+NAFNet uses BasicSR's NAFNet implementation. BasicSR is not currently listed
+in `requirements.txt`; install it separately in a compatible environment before
+training or evaluating NAFNet.
 
-```bash
-py -3.11 visualize.py
+## 5. Train NAFNet
+
+After preparing the GoPro manifest, train NAFNet with:
+
+```powershell
+python scripts\train_nafnet.py --epochs 100 --device auto
 ```
 
-Launch demo:
+The best checkpoint is saved to `weights/NAFNet-GoPro-width32.pth`. Training
+may take substantial time and memory; adjust `--batch-size` and `--crop-size`
+to suit the available hardware.
 
-```bash
-py -3.11 -m streamlit run app.py
+## 6. Demo and Model Comparison
+
+Launch the interactive app:
+
+```powershell
+python -m streamlit run app.py
 ```
 
-## 10. Conclusion
+Create a quick visual demo using three GoPro test images and the Wiener
+baseline:
 
-The CNN + Wiener model achieved slightly higher PSNR and SSIM than the original blurred input in this experiment.
+```powershell
+python scripts\evaluate_deblurring.py --demo
+```
 
-However, the improvement is small. Further training and model optimization are needed to improve deblurring performance.
+The HTML gallery and comparison images are saved under `results/demo/`.
+
+After training NAFNet and DeblurGAN, evaluate all three methods:
+
+```powershell
+python scripts\evaluate_deblurring.py --method both
+```
+
+Use `--method nafnet`, `--method deblurgan`, or `--method wiener` to run a
+single method. Evaluation results are written under `results/`.
+
+## 7. HTML Report
+
+Generate the multi-page report in `docs/report/`:
+
+```powershell
+python generate_report.py
+```
+
+Open `docs/report/index.html` in a browser. The report distinguishes NAFNet
+from the Wiener and DeblurGAN baselines; missing checkpoints or evaluation
+results are reported as not evaluated. The legacy `outputs/evaluation_results.csv`
+contains CNN + Wiener experiment data and should not be interpreted as NAFNet
+results.
