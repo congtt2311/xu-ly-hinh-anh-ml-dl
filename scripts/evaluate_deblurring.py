@@ -214,7 +214,6 @@ def predict_nafnet(
     model: torch.nn.Module, image: np.ndarray, device: torch.device
 ) -> np.ndarray:
     tensor = torch.from_numpy(image.transpose(2, 0, 1).copy()).unsqueeze(0).to(device)
-    tensor = tensor.mul(2).sub(1)
     height, width = tensor.shape[-2:]
     pad_height = (-height) % 8
     pad_width = (-width) % 8
@@ -233,6 +232,7 @@ def predict_deblurgan(
     model: torch.nn.Module, image: np.ndarray, device: torch.device
 ) -> np.ndarray:
     tensor = torch.from_numpy(image.transpose(2, 0, 1).copy()).unsqueeze(0).to(device)
+    tensor = tensor.mul(2).sub(1)
     height, width = tensor.shape[-2:]
     pad_height = (-height) % 4
     pad_width = (-width) % 4

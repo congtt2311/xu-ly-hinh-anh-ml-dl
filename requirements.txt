@@ -6,6 +6,7 @@ Pillow
 tqdm
 streamlit
 torch>=2.1
+basicsr
 pandas
 matplotlib
 matplotlib

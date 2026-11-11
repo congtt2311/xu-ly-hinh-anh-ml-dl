@@ -66,9 +66,9 @@ From the repository root, install the dependencies:
 python -m pip install -r requirements.txt
 ```
 
-NAFNet uses BasicSR's NAFNet implementation. BasicSR is not currently listed
-in `requirements.txt`; install it separately in a compatible environment before
-training or evaluating NAFNet.
+NAFNet uses BasicSR's NAFNet implementation, included in `requirements.txt`.
+If BasicSR cannot be installed in the current Python/PyTorch environment,
+create a compatible environment before training or evaluating NAFNet.
 
 ## 5. Train NAFNet
 
@@ -89,6 +89,9 @@ Launch the interactive app:
 ```powershell
 python -m streamlit run app.py
 ```
+
+The current Streamlit app is the older CNN + Wiener pipeline; it is not the
+NAFNet demo. Use the script below to view NAFNet or baseline outputs.
 
 Create a quick visual demo using three GoPro test images and the Wiener
 baseline:

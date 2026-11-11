@@ -343,7 +343,7 @@ def generate_multipage_report(
   </section>
   <section><h2>Lệnh chạy</h2>
     <pre>python scripts/train_nafnet.py --epochs 100 --device auto
-python scripts/evaluate_deblurring.py --method all</pre>
+python scripts/evaluate_deblurring.py --method both</pre>
     <p class="muted">Đây là lệnh hướng dẫn; báo cáo không khẳng định huấn luyện đã chạy nếu không tìm thấy checkpoint.</p>
   </section>
 """
